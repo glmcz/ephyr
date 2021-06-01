@@ -1307,7 +1307,7 @@ impl InputKey {
     #[must_use]
     pub fn new<'s, S: Into<Cow<'s, str>>>(val: S) -> Option<Self> {
         static REGEX: Lazy<Regex> =
-            Lazy::new(|| Regex::new("^[a-z0-9_-]{1,20}$").unwrap());
+            Lazy::new(|| Regex::new("^[a-z0-9_-]{1,50}$").unwrap());
 
         let val = val.into();
         (!val.is_empty() && REGEX.is_match(&val))
@@ -1328,7 +1328,7 @@ impl<'de> Deserialize<'de> for InputKey {
 
 /// Type of `Input`'s `key` used to form its endpoint URL.
 ///
-/// It should meet `[a-z0-9_-]{1,20}` format.
+/// It should meet `[a-z0-9_-]{1,50}` format.
 #[graphql_scalar]
 impl<S> GraphQLScalar for InputKey
 where
