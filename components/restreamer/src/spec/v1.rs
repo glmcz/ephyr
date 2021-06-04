@@ -16,7 +16,7 @@ use url::Url;
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Spec {
     /// [`Settings`] to be performed.
-    pub settings: Settings,
+    pub settings: Option<Settings>,
 
     /// [`Restream`]s to be performed.
     #[serde(deserialize_with = "Spec::deserialize_restreams")]
@@ -58,6 +58,10 @@ pub struct Settings {
     /// Whether do we need to confirm deletion of inputs and outputs
     /// If `true` we should confirm deletion, `false` - do not confirm
     pub delete_confirmation: Option<bool>,
+
+    /// Whether do we need to confirm enabling/disabling of inputs \
+    /// or outputs
+    pub enable_confirmation: Option<bool>,
 }
 
 /// Shareable (exportable and importable) specification of a

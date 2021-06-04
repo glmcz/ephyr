@@ -2,12 +2,10 @@
   import { onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { mutation } from 'svelte-apollo';
-
   import { SetRestream } from './api/graphql/client.graphql';
-
   import { showError } from './util';
-
   import { restreamModal as value } from './stores';
+  import { saveOrCloseByKeys } from './directives';
 
   const setRestreamMutation = mutation(SetRestream);
 
@@ -72,117 +70,127 @@
 
     try {
       await setRestreamMutation({ variables });
-      value.close();
+      close();
     } catch (e) {
       showError(e.message);
     }
   }
+
+  function close() {
+    value.close();
+  }
 </script>
 
 <template>
-  <div class="uk-modal" class:uk-open={$value.visible}>
-    <div class="uk-modal-dialog uk-modal-body">
-      <h2 class="uk-modal-title">
-        {#if $value.edit_id}Edit{:else}Add new{/if} input source for re-streaming
-      </h2>
-      <button
-        class="uk-modal-close-outside"
-        uk-close
-        type="button"
-        on:click={() => value.close()}
-      />
+  {#if $value.visible}
+    <div
+      class="uk-modal uk-open"
+      use:saveOrCloseByKeys={{ save: submit, close: close }}
+    >
+      <div class="uk-modal-dialog uk-modal-body">
+        <h2 class="uk-modal-title">
+          {#if $value.edit_id}Edit{:else}Add new{/if} input source for re-streaming
+        </h2>
+        <button
+          class="uk-modal-close-outside"
+          uk-close
+          type="button"
+          on:click={close}
+        />
 
-      <fieldset>
-        <div class="restream">
-          <input
-            class="uk-input uk-form-small"
-            type="text"
-            bind:value={$value.label}
-            on:change={() => value.sanitizeLabel()}
-            placeholder="optional label"
-          />
-          <label
-            >rtmp://{public_host}/<input
-              class="uk-input"
-              type="text"
-              placeholder="<stream-key>"
-              bind:value={$value.key}
-            />/origin</label
-          >
-          <div class="uk-alert">
-            {#if $value.is_pull}
-              Server will pull RTMP stream from the address below.
-              <br />
-              Supported protocols:
-              <code>rtmp://</code>,
-              <code>http://.m3u8</code> (HLS)
-            {:else}
-              Server will await RTMP stream to be pushed onto the address above.
-            {/if}
-          </div>
-        </div>
-        <div class="pull">
-          <label
-            ><input
-              class="uk-checkbox"
-              type="checkbox"
-              bind:checked={$value.is_pull}
-            /> or pull from</label
-          >
-          {#if $value.is_pull}
+        <fieldset>
+          <div class="restream">
             <input
-              class="uk-input"
+              class="uk-input uk-form-small"
               type="text"
-              bind:value={$value.pull_url}
-              placeholder="rtmp://..."
+              bind:value={$value.label}
+              on:change={() => value.sanitizeLabel()}
+              placeholder="optional label"
             />
-          {/if}
-        </div>
-        <div class="backup">
-          <label
-            ><input
-              class="uk-checkbox"
-              type="checkbox"
-              bind:checked={$value.with_backup}
-            /> with backup</label
-          >
-          {#if $value.with_backup}
+            <label
+              >rtmp://{public_host}/<input
+                class="uk-input"
+                type="text"
+                placeholder="<stream-key>"
+                bind:value={$value.key}
+              />/origin</label
+            >
+            <div class="uk-alert">
+              {#if $value.is_pull}
+                Server will pull RTMP stream from the address below.
+                <br />
+                Supported protocols:
+                <code>rtmp://</code>,
+                <code>http://.m3u8</code> (HLS)
+              {:else}
+                Server will await RTMP stream to be pushed onto the address
+                above.
+              {/if}
+            </div>
+          </div>
+          <div class="pull">
             <label
               ><input
                 class="uk-checkbox"
                 type="checkbox"
-                bind:checked={$value.backup_is_pull}
-              /> pulled from</label
+                bind:checked={$value.is_pull}
+              /> or pull from</label
             >
-            {#if $value.backup_is_pull}
+            {#if $value.is_pull}
               <input
                 class="uk-input"
                 type="text"
-                bind:value={$value.backup_pull_url}
+                bind:value={$value.pull_url}
                 placeholder="rtmp://..."
               />
             {/if}
-          {/if}
-        </div>
-        <div class="hls">
-          <label
-            ><input
-              class="uk-checkbox"
-              type="checkbox"
-              bind:checked={$value.with_hls}
-            /> with HLS endpoint</label
-          >
-        </div>
-      </fieldset>
+          </div>
+          <div class="backup">
+            <label
+              ><input
+                class="uk-checkbox"
+                type="checkbox"
+                bind:checked={$value.with_backup}
+              /> with backup</label
+            >
+            {#if $value.with_backup}
+              <label
+                ><input
+                  class="uk-checkbox"
+                  type="checkbox"
+                  bind:checked={$value.backup_is_pull}
+                /> pulled from</label
+              >
+              {#if $value.backup_is_pull}
+                <input
+                  class="uk-input"
+                  type="text"
+                  bind:value={$value.backup_pull_url}
+                  placeholder="rtmp://..."
+                />
+              {/if}
+            {/if}
+          </div>
+          <div class="hls">
+            <label
+              ><input
+                class="uk-checkbox"
+                type="checkbox"
+                bind:checked={$value.with_hls}
+              /> with HLS endpoint</label
+            >
+          </div>
+        </fieldset>
 
-      <button
-        class="uk-button uk-button-primary"
-        disabled={!submitable}
-        on:click={submit}
-        >{#if $value.edit_id}Edit{:else}Add{/if}</button
-      >
+        <button
+          class="uk-button uk-button-primary"
+          disabled={!submitable}
+          on:click={submit}
+          >{#if $value.edit_id}Edit{:else}Add{/if}</button
+        >
+      </div>
     </div>
-  </div>
+  {/if}
 </template>
 
 <style lang="stylus">

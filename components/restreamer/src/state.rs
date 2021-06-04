@@ -45,6 +45,10 @@ pub struct Settings {
     /// Whether do we need to confirm deletion of inputs and outputs
     /// If `true` we should confirm deletion, `false` - do not confirm
     pub delete_confirmation: Option<bool>,
+
+    /// Whether do we need to confirm enabling/disabling of inputs or outputs
+    /// If `true` we should confirm, `false` - do not confirm
+    pub enable_confirmation: Option<bool>,
 }
 
 impl Settings {
@@ -54,6 +58,7 @@ impl Settings {
     pub fn export(&self) -> spec::v1::Settings {
         spec::v1::Settings {
             delete_confirmation: self.delete_confirmation,
+            enable_confirmation: self.enable_confirmation,
             title: self.title.clone(),
         }
     }
@@ -63,6 +68,7 @@ impl Settings {
     pub fn apply(&mut self, new: spec::v1::Settings) {
         self.title = new.title;
         self.delete_confirmation = new.delete_confirmation;
+        self.enable_confirmation = new.enable_confirmation;
     }
 }
 
@@ -72,6 +78,7 @@ impl Default for Settings {
             password_hash: None,
             title: None,
             delete_confirmation: Some(true),
+            enable_confirmation: Some(true),
         }
     }
 }
@@ -186,7 +193,11 @@ impl State {
         }
 
         let mut settings = self.settings.lock_mut();
-        settings.apply(new.settings);
+        if new.settings.is_some() || replace {
+            settings.apply(
+                new.settings.unwrap_or_else(|| Settings::default().export()),
+            );
+        }
     }
 
     /// Exports this [`State`] as a [`spec::v1::Spec`].
@@ -194,7 +205,7 @@ impl State {
     #[must_use]
     pub fn export(&self) -> Spec {
         spec::v1::Spec {
-            settings: self.settings.get_cloned().export(),
+            settings: Some(self.settings.get_cloned().export()),
             restreams: self
                 .restreams
                 .get_cloned()

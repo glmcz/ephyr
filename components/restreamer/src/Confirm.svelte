@@ -1,4 +1,6 @@
 <script lang="js">
+  import { saveOrCloseByKeys } from './directives';
+
   let showDialog = false;
   let functionToCall = {
     func: null,
@@ -6,7 +8,7 @@
   };
 
   function callFunction() {
-    showDialog = false;
+    close();
     functionToCall['func'](...functionToCall['args']);
   }
 
@@ -14,13 +16,20 @@
     functionToCall = { func, args };
     showDialog = true;
   }
+
+  function close() {
+    showDialog = false;
+  }
 </script>
 
 <template>
   <slot {confirm} />
 
   {#if showDialog}
-    <div class="uk-modal uk-open">
+    <div
+      use:saveOrCloseByKeys={{ save: callFunction, close: close }}
+      class="uk-modal uk-open"
+    >
       <div class="uk-modal-dialog uk-modal-body uk-text-left">
         <h2 class="uk-modal-title">
           <slot name="title">
@@ -31,7 +40,7 @@
           class="uk-modal-close-outside"
           uk-close
           type="button"
-          on:click={() => (showDialog = false)}
+          on:click={close}
         />
 
         <p><slot name="description">This action can't be undone!</slot></p>

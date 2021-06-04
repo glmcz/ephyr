@@ -66,7 +66,7 @@
           >
           <span slot="title">Start all outputs</span>
           <span slot="description"
-            >Are you sure you want to start all outputs of all restreams?
+            >This will start all outputs of all restreams.
           </span>
           <span slot="confirm">Start</span>
         </Confirm>
@@ -83,7 +83,7 @@
           >
           <span slot="title">Stop all outputs</span>
           <span slot="description"
-            >Are you sure you want to stop all outputs of all restreams?
+            >This will stop all outputs of all restreams.
           </span>
           <span slot="confirm">Stop</span>
         </Confirm>

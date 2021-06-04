@@ -8,6 +8,7 @@
   import { setClient, subscribe } from 'svelte-apollo';
   import Router, { replace, location, link } from 'svelte-spa-router';
   import { wrap } from 'svelte-spa-router/wrap';
+  import cloneDeep from 'lodash/cloneDeep';
 
   import {
     ExportAllRestreams,
@@ -159,10 +160,12 @@
             >
               <i class="fas fa-edit" title="Set title" />
             </a>
-            <SettingsModal
-              info={$info.data.info}
-              bind:visible={openSettingsModal}
-            />
+            {#if openSettingsModal}
+              <SettingsModal
+                info={cloneDeep($info.data.info)}
+                bind:visible={openSettingsModal}
+              />
+            {/if}
             {#key $info.data.info.passwordHash}
               <a
                 href="/"
@@ -178,10 +181,12 @@
                     : 'Change'} password"
                 />
               </a>
-              <PasswordModal
-                current_hash={$info.data.info.passwordHash}
-                bind:visible={openPasswordModal}
-              />
+              {#if openPasswordModal}
+                <PasswordModal
+                  current_hash={$info.data.info.passwordHash}
+                  bind:visible={openPasswordModal}
+                />
+              {/if}
             {/key}
             {#if isOutputPage($location)}
               <a

@@ -865,6 +865,16 @@
                   "ofType": null
                 },
                 "defaultValue": null
+              },
+              {
+                "name": "enableConfirmation",
+                "description": "Whether do we need to confirm enabling/disabling of inputs or outputs",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Boolean",
+                  "ofType": null
+                },
+                "defaultValue": null
               }
             ],
             "type": {
@@ -2141,6 +2151,18 @@
           {
             "name": "deleteConfirmation",
             "description": "Whether do we need to confirm deletion of inputs and outputs",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Boolean",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "enableConfirmation",
+            "description": "Whether do we need to confirm enabling/disabling of inputs or outputs",
             "args": [],
             "type": {
               "kind": "SCALAR",

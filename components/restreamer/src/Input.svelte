@@ -1,15 +1,22 @@
 <script lang="js">
-  import { mutation } from 'svelte-apollo';
+  import { mutation, subscribe } from 'svelte-apollo';
 
-  import { DisableInput, EnableInput } from './api/graphql/client.graphql';
+  import {
+    DisableInput,
+    EnableInput,
+    Info,
+  } from './api/graphql/client.graphql';
 
   import { showError } from './util';
 
   import Toggle from './Toggle.svelte';
+  import Confirm from './Confirm.svelte';
   import Url from './Url.svelte';
 
   const disableInputMutation = mutation(DisableInput);
   const enableInputMutation = mutation(EnableInput);
+
+  const info = subscribe(Info, { errorPolicy: 'all' });
 
   export let public_host = 'localhost';
   export let restream_id;
@@ -18,6 +25,12 @@
 
   $: isPull = !!value.src && value.src.__typename === 'RemoteInputSrc';
   $: isFailover = !!value.src && value.src.__typename === 'FailoverInputSrc';
+
+  $: toggleStatusText = value.enabled ? 'Disable' : 'Enable';
+
+  $: enableConfirmation = $info.data
+    ? $info.data.info.enableConfirmation
+    : true;
 
   async function toggle() {
     const variables = { restream_id, input_id: value.id };
@@ -42,11 +55,19 @@
 
 <template>
   <div class="input">
-    <Toggle
-      id="input-toggle-{value.id}"
-      checked={value.enabled}
-      on:change={toggle}
-    />
+    <Confirm let:confirm>
+      <Toggle
+        id="input-toggle-{value.id}"
+        checked={value.enabled}
+        confirmFn={enableConfirmation ? confirm : undefined}
+        onChangeFn={toggle}
+      />
+      <span slot="title"
+        >{toggleStatusText} <code>{restream_key}</code> input</span
+      >
+      <span slot="description">Are you sure about it?</span>
+      <span slot="confirm">{toggleStatusText}</span>
+    </Confirm>
     <div class="endpoints">
       {#each value.endpoints as endpoint}
         <div class="endpoint">
@@ -113,6 +134,7 @@
   .fa-arrow-down, .fa-arrow-right
     font-size: 14px
     cursor: help
+
   .fa-circle, .fa-dot-circle
     font-size: 13px
     cursor: help
@@ -120,10 +142,13 @@
   .input
     display: flex;
     align-items: baseline;
+
   .endpoints
     margin-left: 4px
+
   .endpoint
     display: flex
+
   .endpoint .endpoint-status-icon
     margin-right: 5px
 </style>

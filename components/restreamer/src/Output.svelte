@@ -45,6 +45,12 @@
     ? $info.data.info.deleteConfirmation
     : true;
 
+  $: enableConfirmation = $info.data
+    ? $info.data.info.enableConfirmation
+    : true;
+
+  $: toggleStatusText = value.enabled ? 'Disable' : 'Enable';
+
   // Last used non-zero volume.
   let last_volume = value.volume === 0 ? 100 : value.volume;
 
@@ -144,12 +150,20 @@
     </a>
 
     <div>
-      <Toggle
-        id="output-toggle-{value.id}"
-        classes="small"
-        checked={value.enabled}
-        on:change={toggle}
-      />
+      <Confirm let:confirm>
+        <Toggle
+          id="output-toggle-{value.id}"
+          classes="small"
+          checked={value.enabled}
+          confirmFn={enableConfirmation ? confirm : undefined}
+          onChangeFn={toggle}
+        />
+        <span slot="title"
+          >{toggleStatusText} <code>{value.dst}</code> output</span
+        >
+        <span slot="description">Are you sure about it?</span>
+        <span slot="confirm">{toggleStatusText}</span>
+      </Confirm>
     </div>
 
     <div class="output-mixes">

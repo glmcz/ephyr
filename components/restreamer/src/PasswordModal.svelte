@@ -1,9 +1,8 @@
 <script lang="js">
   import { mutation } from 'svelte-apollo';
-
   import { SetPassword } from './api/graphql/client.graphql';
-
   import { showError } from './util';
+  import { saveOrCloseByKeys } from './directives';
 
   const setPasswordMutation = mutation(SetPassword);
 
@@ -55,7 +54,10 @@
 </script>
 
 <template>
-  <div class="uk-modal" class:uk-open={visible}>
+  <div
+    class="uk-modal uk-open"
+    use:saveOrCloseByKeys={{ save: submit_change, close: close }}
+  >
     <div class="uk-modal-dialog uk-modal-body">
       <h2 class="uk-modal-title">
         {#if !current_hash}

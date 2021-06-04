@@ -3,6 +3,26 @@
   export let checked = false;
   export let classes = '';
   export let title = '';
+
+  export let confirmFn: (onSuccess: () => void) => void;
+  export let onChangeFn: () => unknown;
+
+  let domElement: HTMLInputElement;
+
+  function onChange() {
+    if (confirmFn) {
+      const currentValue = domElement.checked;
+      const successFn = () => {
+        domElement.checked = currentValue;
+        if (onChangeFn) onChangeFn();
+      };
+
+      confirmFn(successFn);
+      domElement.checked = !currentValue;
+    } else {
+      if (onChangeFn) onChangeFn();
+    }
+  }
 </script>
 
 <template>
@@ -11,7 +31,13 @@
     {title}
     style="font-size:{classes.includes('small') ? 8 : 10}px"
   >
-    <input type="checkbox" bind:checked {id} on:change />
+    <input
+      type="checkbox"
+      bind:checked
+      bind:this={domElement}
+      {id}
+      on:click={onChange}
+    />
     <label for={id} class="toggle" />
   </span>
 </template>

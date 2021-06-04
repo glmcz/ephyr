@@ -692,11 +692,16 @@ impl MutationsRoot {
         delete_confirmation(
             description = "Whether do we need to confirm deletion of inputs \
             and outputs"
+        ),
+        enable_confirmation(
+            description = "Whether do we need to confirm enabling/disabling of \
+            inputs or outputs"
         )
     ))]
     fn set_settings(
         title: Option<String>,
         delete_confirmation: Option<bool>,
+        enable_confirmation: Option<bool>,
         context: &Context,
     ) -> Result<bool, graphql::Error> {
         // Validate title
@@ -710,6 +715,7 @@ impl MutationsRoot {
         let mut settings = context.state().settings.lock_mut();
         settings.title = Some(value);
         settings.delete_confirmation = delete_confirmation;
+        settings.enable_confirmation = enable_confirmation;
         Ok(true)
     }
 }
@@ -730,6 +736,7 @@ impl QueriesRoot {
             password_hash: settings.password_hash,
             title: settings.title,
             delete_confirmation: settings.delete_confirmation,
+            enable_confirmation: settings.enable_confirmation,
         }
     }
 
@@ -785,7 +792,7 @@ impl QueriesRoot {
         (!restreams.is_empty())
             .then(|| {
                 let spec: Spec = spec::v1::Spec {
-                    settings,
+                    settings: Some(settings),
                     restreams,
                 }
                 .into();
@@ -818,6 +825,7 @@ impl SubscriptionsRoot {
                 password_hash: h.password_hash,
                 title: h.title,
                 delete_confirmation: h.delete_confirmation,
+                enable_confirmation: h.enable_confirmation,
             })
             .to_stream()
             .boxed()
@@ -850,6 +858,9 @@ pub struct Info {
 
     /// Whether do we need to confirm deletion of inputs and outputs
     pub delete_confirmation: Option<bool>,
+
+    /// Whether do we need to confirm enabling/disabling of inputs or outputs
+    pub enable_confirmation: Option<bool>,
 
     /// [Argon2] hash of the password that this server's GraphQL API is
     /// protected with, if any.

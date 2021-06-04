@@ -3,6 +3,7 @@ subscription Info {
         publicHost
         title
         deleteConfirmation
+        enableConfirmation
         passwordHash
     }
 }
@@ -190,6 +191,14 @@ mutation SetPassword($new: String, $old: String) {
     setPassword(new: $new, old: $old)
 }
 
-mutation SetSettings($title: String!, $deleteConfirmation: Boolean!) {
-    setSettings(title: $title, deleteConfirmation: $deleteConfirmation)
+mutation SetSettings(
+    $title: String
+    $deleteConfirmation: Boolean!
+    $enableConfirmation: Boolean!
+) {
+    setSettings(
+        title: $title
+        deleteConfirmation: $deleteConfirmation
+        enableConfirmation: $enableConfirmation
+    )
 }

@@ -1,12 +1,10 @@
 <script lang="js">
   import { onDestroy } from 'svelte';
   import { mutation } from 'svelte-apollo';
-
   import { SetOutput } from './api/graphql/client.graphql';
-
   import { outputModal as value } from './stores';
-
   import { sanitizeLabel, sanitizeUrl, showError } from './util';
+  import { saveOrCloseByKeys } from './directives';
 
   const setOutputMutation = mutation(SetOutput);
 
@@ -215,6 +213,10 @@
     event.currentTarget.checked = true;
   }
 
+  function close() {
+    value.close();
+  }
+
   const multipleNoteTemplate = `
       <div class="uk-alert">
         Server will publish the input live stream to these addresses.
@@ -239,164 +241,174 @@
 </script>
 
 <template>
-  <div class="uk-modal" class:uk-open={$value.visible}>
+  {#if $value.visible}
     <div
-      class="uk-modal-dialog uk-modal-body"
-      class:is-multi-list={$value.isMultiList()}
-      class:is-multi-json={$value.isMultiJson()}
+      class="uk-modal uk-open"
+      use:saveOrCloseByKeys={{ save: submit, close: close }}
     >
-      <h2 class="uk-modal-title">
+      <div
+        class="uk-modal-dialog uk-modal-body"
+        class:is-multi-list={$value.isMultiList()}
+        class:is-multi-json={$value.isMultiJson()}
+      >
+        <h2 class="uk-modal-title">
+          {#if !$value.edit_id}
+            Add new output destination{$value.multi ? 's' : ''} for re-streaming
+          {:else}
+            Edit output destination for re-streaming
+          {/if}
+        </h2>
+        <button
+          class="uk-modal-close-outside"
+          uk-close
+          type="button"
+          on:click={close}
+        />
+
         {#if !$value.edit_id}
-          Add new output destination{$value.multi ? 's' : ''} for re-streaming
-        {:else}
-          Edit output destination for re-streaming
+          <ul class="uk-tab">
+            <li class:uk-active={!$value.multi}>
+              <a href="/" on:click|preventDefault={() => value.switchSingle()}
+                >Single</a
+              >
+            </li>
+            <li class:uk-active={$value.isMultiList()}>
+              <a
+                href="/"
+                on:click|preventDefault={() => value.switchMultiList()}
+                >Multiple - list</a
+              >
+            </li>
+            <li class:uk-active={$value.isMultiJson()}>
+              <a
+                href="/"
+                on:click|preventDefault={() => value.switchMultiJson()}
+                >Multiple - Json</a
+              >
+            </li>
+          </ul>
         {/if}
-      </h2>
-      <button
-        class="uk-modal-close-outside"
-        uk-close
-        type="button"
-        on:click={() => value.close()}
-      />
 
-      {#if !$value.edit_id}
-        <ul class="uk-tab">
-          <li class:uk-active={!$value.multi}>
-            <a href="/" on:click|preventDefault={() => value.switchSingle()}
-              >Single</a
-            >
-          </li>
-          <li class:uk-active={$value.isMultiList()}>
-            <a href="/" on:click|preventDefault={() => value.switchMultiList()}
-              >Multiple - list</a
-            >
-          </li>
-          <li class:uk-active={$value.isMultiJson()}>
-            <a href="/" on:click|preventDefault={() => value.switchMultiJson()}
-              >Multiple - Json</a
-            >
-          </li>
-        </ul>
-      {/if}
-
-      <fieldset class="single-form">
-        <input
-          class="uk-input uk-form-small"
-          type="text"
-          bind:value={$value.label}
-          on:change={() => value.sanitizeLabel()}
-          placeholder="optional label"
-        />
-        <input
-          class="uk-input"
-          type="text"
-          bind:value={$value.url}
-          placeholder="rtmp://..."
-        />
-        <input
-          class="uk-input"
-          type="text"
-          bind:value={$value.preview_url}
-          placeholder="optional preview url"
-        />
-        <div class="uk-alert">
-          Server will publish the input live stream to this address.
-          <br />
-          Supported protocols:
-          <code>rtmp://</code>,
-          <code>srt://</code>,
-          <code>icecast://</code>,
-          <code>file:///.flv</code>
-        </div>
-
-        {#each $value.mix_urls as mix_url, i}
-          <label class="mix-with">
-            <input
-              class="uk-checkbox"
-              type="checkbox"
-              checked
-              on:change={(ev) => removeMixinSlot(ev, i)}
-            /> mix with</label
-          >
+        <fieldset class="single-form">
+          <input
+            class="uk-input uk-form-small"
+            type="text"
+            bind:value={$value.label}
+            on:change={() => value.sanitizeLabel()}
+            placeholder="optional label"
+          />
           <input
             class="uk-input"
             type="text"
-            bind:value={mix_url}
-            placeholder="ts://<teamspeak-host>:<port>/<channel>?name=<name>"
+            bind:value={$value.url}
+            placeholder="rtmp://..."
           />
-        {/each}
-
-        {#if $value.mix_urls.length < 5}
-          <label class="mix-with">
-            <input
-              class="uk-checkbox"
-              type="checkbox"
-              on:change={addMixinSlot}
-            /> mix with</label
-          >
-        {/if}
-
-        {#if $value.mix_urls.length > 0}
+          <input
+            class="uk-input"
+            type="text"
+            bind:value={$value.preview_url}
+            placeholder="optional preview url"
+          />
           <div class="uk-alert">
-            Server will mix the input live stream with the address{$value
-              .mix_urls.length > 1
-              ? 'es'
-              : ''} above.
+            Server will publish the input live stream to this address.
             <br />
-            Supported protocols: <code>ts://</code>, <code>http://.mp3</code>
-            <br /><br />
-            For <code>ts://</code>:
-            <br />
-            If <code>name</code> is not specified than the label value will be used,
-            if any, or a random generated one.
+            Supported protocols:
+            <code>rtmp://</code>,
+            <code>srt://</code>,
+            <code>icecast://</code>,
+            <code>file:///.flv</code>
           </div>
-        {/if}
-      </fieldset>
 
-      <fieldset class="multi-list-form">
-        {#if !!invalidLine}
-          <span class="uk-form-danger line-err">Invalid line {invalidLine}</span
-          >
-        {/if}
-        <textarea
-          class="uk-textarea"
-          class:uk-form-danger={!!invalidLine}
-          bind:value={$value.list}
-          on:change={revalidateList}
-          placeholder={multiListPlaceholderText}
-        />
-        {@html multipleNoteTemplate}
-      </fieldset>
+          {#each $value.mix_urls as mix_url, i}
+            <label class="mix-with">
+              <input
+                class="uk-checkbox"
+                type="checkbox"
+                checked
+                on:change={(ev) => removeMixinSlot(ev, i)}
+              /> mix with</label
+            >
+            <input
+              class="uk-input"
+              type="text"
+              bind:value={mix_url}
+              placeholder="ts://<teamspeak-host>:<port>/<channel>?name=<name>"
+            />
+          {/each}
 
-      <fieldset class="multi-json-form">
-        <textarea
-          class="uk-textarea"
-          class:uk-form-danger={!!invalidJson}
-          bind:value={$value.json}
-          on:change={revalidateJson}
-          placeholder={multiJsonPlaceholderText}
-        />
-        {#if !!invalidJson}
-          <div class="uk-form-danger json-err">
-            <span class="">{invalidJson}</span>
-            <pre>
+          {#if $value.mix_urls.length < 5}
+            <label class="mix-with">
+              <input
+                class="uk-checkbox"
+                type="checkbox"
+                on:change={addMixinSlot}
+              /> mix with</label
+            >
+          {/if}
+
+          {#if $value.mix_urls.length > 0}
+            <div class="uk-alert">
+              Server will mix the input live stream with the address{$value
+                .mix_urls.length > 1
+                ? 'es'
+                : ''} above.
+              <br />
+              Supported protocols: <code>ts://</code>, <code>http://.mp3</code>
+              <br /><br />
+              For <code>ts://</code>:
+              <br />
+              If <code>name</code> is not specified than the label value will be
+              used, if any, or a random generated one.
+            </div>
+          {/if}
+        </fieldset>
+
+        <fieldset class="multi-list-form">
+          {#if !!invalidLine}
+            <span class="uk-form-danger line-err"
+              >Invalid line {invalidLine}</span
+            >
+          {/if}
+          <textarea
+            class="uk-textarea"
+            class:uk-form-danger={!!invalidLine}
+            bind:value={$value.list}
+            on:change={revalidateList}
+            placeholder={multiListPlaceholderText}
+          />
+          {@html multipleNoteTemplate}
+        </fieldset>
+
+        <fieldset class="multi-json-form">
+          <textarea
+            class="uk-textarea"
+            class:uk-form-danger={!!invalidJson}
+            bind:value={$value.json}
+            on:change={revalidateJson}
+            placeholder={multiJsonPlaceholderText}
+          />
+          {#if !!invalidJson}
+            <div class="uk-form-danger json-err">
+              <span class="">{invalidJson}</span>
+              <pre>
               <code>
                 {multiJsonPlaceholderText}
               </code>
           </pre>
-          </div>
-        {/if}
+            </div>
+          {/if}
 
-        {@html multipleNoteTemplate}
-      </fieldset>
+          {@html multipleNoteTemplate}
+        </fieldset>
 
-      <button
-        class="uk-button uk-button-primary"
-        disabled={!submitable}
-        on:click={submit}>{!$value.edit_id ? 'Add' : 'Edit'}</button
-      >
+        <button
+          class="uk-button uk-button-primary"
+          disabled={!submitable}
+          on:click={submit}>{!$value.edit_id ? 'Add' : 'Edit'}</button
+        >
+      </div>
     </div>
-  </div>
+  {/if}
 </template>
 
 <style lang="stylus">
