@@ -7,6 +7,7 @@
     EnableAllOutputsOfRestreams,
     DisableAllOutputsOfRestreams,
   } from '../api/graphql/client.graphql';
+  import OutputModal from '../OutputModal.svelte';
 
   const enableAllOutputsOfRestreamsMutation = mutation(
     EnableAllOutputsOfRestreams
@@ -42,6 +43,7 @@
 </script>
 
 <template>
+  <OutputModal />
   <section class="uk-section-muted toolbar">
     <span class="label">ALL</span>
     <div class="uk-grid uk-grid-small">

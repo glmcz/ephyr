@@ -1,12 +1,11 @@
 import App from './App.svelte';
-import Toolbar from './Toolbar.svelte';
-import PageAll from './pages/All.svelte';
+import Empty from './Empty.svelte';
 
 const app = new App({
   target: document.body,
   props: {
-    mainComponent: PageAll,
-    toolbarComponent: Toolbar,
+    mainComponent: Empty,
+    toolbarComponent: Empty,
   },
 });
 
