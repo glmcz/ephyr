@@ -718,10 +718,7 @@ impl Clip {
         if !matches!(url.scheme().to_lowercase().as_str(), "http" | "https") {
             return Err(anyhow!("Only HTTP YouTube URLs are supported"));
         }
-        if !matches!(
-            url.host_str(),
-            Some("youtube.com") | Some("www.youtube.com")
-        ) {
+        if !matches!(url.host_str(), Some("youtube.com" | "www.youtube.com")) {
             return Err(anyhow!("Only YouTube URLs are supported"));
         }
         if url.path().trim_end_matches('/') != "/watch" {
