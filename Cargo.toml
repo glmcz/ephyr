@@ -1,5 +1,5 @@
 [workspace]
-members = ["common/api/*", "common/log", "common/serde", "components/*"]
+members = ["common/api/*", "common/log", "common/serde", "components/restreamer", "components/vod-meta-server"]
 
 [profile.release]
 lto = "thin"
