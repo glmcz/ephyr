@@ -1,7 +1,7 @@
 <script lang="js">
   import { onDestroy } from 'svelte';
   import { mutation } from 'svelte-apollo';
-  import { SetOutput } from './api/graphql/client.graphql';
+  import { SetOutput } from '../graphql/client.graphql';
   import { outputModal as value } from './stores';
   import { sanitizeLabel, sanitizeUrl, showError } from './util';
   import { saveOrCloseByKeys } from './directives';

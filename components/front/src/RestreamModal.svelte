@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { mutation } from 'svelte-apollo';
-  import { SetRestream } from './api/graphql/client.graphql';
+  import { SetRestream } from '../graphql/client.graphql';
   import { showError } from './util';
   import { restreamModal as value } from './stores';
   import { saveOrCloseByKeys } from './directives';

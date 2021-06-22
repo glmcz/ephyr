@@ -1,6 +1,6 @@
 <script lang="js">
   import { mutation } from 'svelte-apollo';
-  import { SetPassword } from './api/graphql/client.graphql';
+  import { SetPassword } from '../graphql/client.graphql';
   import { showError } from './util';
   import { saveOrCloseByKeys } from './directives';
 

@@ -1,7 +1,7 @@
 <script lang="js">
   import { getClient, mutation } from 'svelte-apollo';
 
-  import { DvrFiles, RemoveDvrFile } from './api/graphql/client.graphql';
+  import { DvrFiles, RemoveDvrFile } from '../graphql/client.graphql';
 
   import { showError } from './util';
 

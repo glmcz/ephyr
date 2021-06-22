@@ -1,7 +1,7 @@
 <script lang="js">
   import { mutation } from 'svelte-apollo';
 
-  import { TuneDelay, TuneVolume } from './api/graphql/client.graphql';
+  import { TuneDelay, TuneVolume } from '../graphql/client.graphql';
 
   import { showError } from './util';
 
