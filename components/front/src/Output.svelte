@@ -8,7 +8,7 @@
     Info,
     RemoveOutput,
     TuneVolume,
-  } from '../graphql/client.graphql';
+  } from '../../graphql/client.graphql';
 
   import { showError, isOutputPage } from './util';
 

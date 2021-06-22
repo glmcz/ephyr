@@ -5,7 +5,7 @@
     DisableInput,
     EnableInput,
     Info,
-  } from '../graphql/client.graphql';
+  } from '../../graphql/client.graphql';
 
   import { showError } from './util';
 

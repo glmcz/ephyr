@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { get } from 'svelte/store';
   import { mutation } from 'svelte-apollo';
-  import { Import } from '../graphql/client.graphql';
+  import { Import } from '../../graphql/client.graphql';
   import { exportModal as value } from './stores';
   import { saveOrCloseByKeys } from './directives';
 
