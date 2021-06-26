@@ -1,7 +1,5 @@
-use actix_web_static_files::resource_dir;
-use actix_web_static_files::NpmBuild;
-use std::env;
-use std::path::Path;
+use actix_web_static_files::{resource_dir, NpmBuild};
+use std::{env, path::Path};
 
 fn main() -> anyhow::Result<()> {
     let out_dir = env::var("OUT_DIR").unwrap();

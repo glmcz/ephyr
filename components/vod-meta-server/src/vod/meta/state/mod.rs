@@ -720,7 +720,7 @@ impl Clip {
         }
         if !matches!(
             url.host_str(),
-            Some("youtube.com") | Some("www.youtube.com")
+            Some("youtube.com" | "www.youtube.com")
         ) {
             return Err(anyhow!("Only YouTube URLs are supported"));
         }
