@@ -1,5 +1,5 @@
-use actix_web_static_files::NpmBuild;
 use actix_web_static_files::resource_dir;
+use actix_web_static_files::NpmBuild;
 use std::env;
 use std::path::Path;
 

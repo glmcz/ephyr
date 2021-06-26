@@ -23,7 +23,7 @@
 
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const wsClient = new SubscriptionClient(
-     `${protocol}://${window.location.hostname}/api`,
+    `${protocol}://${window.location.hostname}/api`,
     { reconnect: true }
   );
   wsClient.onConnected(() => {

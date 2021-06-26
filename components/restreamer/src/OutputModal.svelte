@@ -74,12 +74,13 @@
     const len = $value.json.length;
     json.trim();
 
-    const isArrayOfObjects = json && json.charAt(0) === '{' && json.charAt(len - 1) === '}';
+    const isArrayOfObjects =
+      json && json.charAt(0) === '{' && json.charAt(len - 1) === '}';
     if (isArrayOfObjects) {
       json = json
-              .trim()
-              .split(/\r\n|\r|\n/)
-              .join(',');
+        .trim()
+        .split(/\r\n|\r|\n/)
+        .join(',');
       $value.json = `[${json}]`;
     }
   }

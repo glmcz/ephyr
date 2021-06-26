@@ -79,4 +79,3 @@ export function isOutputPage(): boolean {
 
   return pathname === '/restream/' && p[3] === 'output';
 }
-

@@ -1,7 +1,6 @@
 import path from 'path';
 import webpack from 'webpack';
 
-import HtmlWebpackPlugin from 'html-webpack-plugin';
 import CopyPlugin from 'copy-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import MinifyHtmlWebpackPlugin from 'minify-html-webpack-plugin';
@@ -12,7 +11,7 @@ const mode = is_prod ? 'production' : 'development';
 
 const config: webpack.Configuration = {
   entry: {
-    'main': './src/main.ts',
+    main: './src/main.ts',
     'restream/main': './src/restream.ts',
   },
   resolve: {
@@ -64,7 +63,12 @@ const config: webpack.Configuration = {
   mode,
   plugins: [
     new CopyPlugin({
-      patterns: [{ from: 'static/index.html' }, { from: 'static/restream', to: 'restream' }, { from: 'static/assets', to: 'restream' }, { from: 'static/assets' } ],
+      patterns: [
+        { from: 'static/index.html' },
+        { from: 'static/restream', to: 'restream' },
+        { from: 'static/assets', to: 'restream' },
+        { from: 'static/assets' },
+      ],
     }),
     new MiniCssExtractPlugin({
       filename: '[name].css',
