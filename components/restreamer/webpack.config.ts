@@ -12,8 +12,8 @@ const mode = is_prod ? 'production' : 'development';
 
 const config: webpack.Configuration = {
   entry: {
-    main: './src/main.ts',
-    restream: './src/restream.ts',
+    'main': './src/main.ts',
+    'restream/main': './src/restream.ts',
   },
   resolve: {
     alias: {
@@ -63,18 +63,8 @@ const config: webpack.Configuration = {
   },
   mode,
   plugins: [
-    new HtmlWebpackPlugin({
-      template: `${__dirname}/static/index.ejs`,
-      filename: `index.html`,
-      chunks: ['main'],
-    }),
-    new HtmlWebpackPlugin({
-      template: `${__dirname}/static/index.ejs`,
-      filename: `restream/index.html`,
-      chunks: ['restream'],
-    }),
     new CopyPlugin({
-      patterns: [{ from: 'static' }, { from: 'static', to: 'restream' }],
+      patterns: [{ from: 'static/index.html' }, { from: 'static/restream', to: 'restream' }, { from: 'static/assets', to: 'restream' }, { from: 'static/assets' } ],
     }),
     new MiniCssExtractPlugin({
       filename: '[name].css',

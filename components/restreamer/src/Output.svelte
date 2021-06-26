@@ -1,6 +1,5 @@
 <script lang="js">
   import { mutation, subscribe } from 'svelte-apollo';
-  import { link, location } from 'svelte-spa-router';
 
   import {
     DisableOutput,
@@ -113,58 +112,62 @@
   <div
     class="uk-card uk-card-default uk-card-body uk-flex"
     class:hidden
-    class:grouped={!isOutputPage($location)}
-    class:uk-margin-left={!isOutputPage($location)}
+    class:grouped={!isOutputPage()}
+    class:uk-margin-left={!isOutputPage()}
   >
-    <Confirm let:confirm>
-      <button
-        type="button"
-        class="uk-close"
-        uk-close
-        on:click={deleteConfirmation ? () => confirm(remove) : remove}
-      />
-      <span slot="title">Removing output</span>
-      <span slot="description"
-        ><code class="overflow-wrap">{value.dst}</code>
-        <br /><br />
-        {#if value.dst.startsWith('file:///')}
-          <b>Warning!</b> Any associated recorded files will be removed.
+    {#if !isOutputPage()}
+      <Confirm let:confirm>
+        <button
+          type="button"
+          class="uk-close"
+          uk-close
+          on:click={deleteConfirmation ? () => confirm(remove) : remove}
+        />
+        <span slot="title">Removing output</span>
+        <span slot="description"
+          ><code class="overflow-wrap">{value.dst}</code>
           <br /><br />
-        {/if}
-        You won't be able to undone this.</span
-      >
-      <span slot="confirm">Remove</span>
-    </Confirm>
+          {#if value.dst.startsWith('file:///')}
+            <b>Warning!</b> Any associated recorded files will be removed.
+            <br /><br />
+          {/if}
+          You won't be able to undone this.</span
+        >
+        <span slot="confirm">Remove</span>
+      </Confirm>
+    {/if}
 
     {#if value.label}
       <span class="label">{value.label}</span>
     {/if}
 
-    <div class="left-buttons-area" />
-    <a
-      class="edit-output"
-      href="/"
-      on:click|preventDefault={openEditOutputModal}
-    >
-      <i class="far fa-edit" title="Edit output" />
-    </a>
+    {#if !isOutputPage()}
+      <div class="left-buttons-area" />
+      <a
+        class="edit-output"
+        href="/"
+        on:click|preventDefault={openEditOutputModal}
+      >
+        <i class="far fa-edit" title="Edit output" />
+      </a>
 
-    <div>
-      <Confirm let:confirm>
-        <Toggle
-          id="output-toggle-{value.id}"
-          classes="small"
-          checked={value.enabled}
-          confirmFn={enableConfirmation ? confirm : undefined}
-          onChangeFn={toggle}
-        />
-        <span slot="title"
-          >{toggleStatusText} <code>{value.dst}</code> output</span
-        >
-        <span slot="description">Are you sure about it?</span>
-        <span slot="confirm">{toggleStatusText}</span>
-      </Confirm>
-    </div>
+      <div>
+        <Confirm let:confirm>
+          <Toggle
+            id="output-toggle-{value.id}"
+            classes="small"
+            checked={value.enabled}
+            confirmFn={enableConfirmation ? confirm : undefined}
+            onChangeFn={toggle}
+          />
+          <span slot="title"
+            >{toggleStatusText} <code>{value.dst}</code> output</span
+          >
+          <span slot="description">Are you sure about it?</span>
+          <span slot="confirm">{toggleStatusText}</span>
+        </Confirm>
+      </div>
+    {/if}
 
     <div class="output-mixes">
       {#if value.status === 'ONLINE'}
@@ -188,11 +191,11 @@
       {/if}
 
       {#if value.mixins.length > 0}
-        {#if !isOutputPage($location)}
+        {#if !isOutputPage()}
           <a
             class="single-view"
-            href="/restream/{restream_id}/output/{value.id}"
-            use:link
+            href="/restream/#/id/{restream_id}/output/{value.id}"
+            target="_blank"
             title="Open in a separate window"
             ><i class="fas fa-external-link-alt" />
           </a>

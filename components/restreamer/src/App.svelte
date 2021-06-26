@@ -21,15 +21,9 @@
 
   let isOnline = true;
 
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const wsClient = new SubscriptionClient(
-    !!process.env.WEBPACK_DEV_SERVER
-      ? 'ws://127.0.0.1/api'
-      : 'ws' +
-        (window.location.protocol === 'https:' ? 's' : '') +
-        '://' +
-        window.location.host +
-        window.location.pathname.replace(/\/?$/g, '') +
-        '/api',
+     `${protocol}://${window.location.hostname}/api`,
     { reconnect: true }
   );
   wsClient.onConnected(() => {
@@ -69,7 +63,7 @@
   export let toolbarComponent;
 
   const routes = {
-    '/restream/:restream_id/output/:output_id': wrap({
+    '/id/:restream_id/output/:output_id': wrap({
       component: PageOutput,
       props: {
         state,

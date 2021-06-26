@@ -109,11 +109,20 @@ pub mod client {
         State,
     };
 
+    const UNPROTECTED_ROUTE:&str = "/restream";
+
     pub mod public_dir {
         #![allow(clippy::must_use_candidate, unused_results)]
         #![doc(hidden)]
 
         include!(concat!(env!("OUT_DIR"), "/generated.rs"));
+    }
+
+    pub mod public_unprotected_dir {
+        #![allow(clippy::must_use_candidate, unused_results)]
+        #![doc(hidden)]
+
+        include!(concat!(env!("OUT_DIR"), "/generated_unprotected.rs"));
     }
 
     /// Runs client HTTP server.
@@ -139,7 +148,9 @@ pub mod client {
         let stored_cfg = cfg.clone();
 
         Ok(HttpServer::new(move || {
-            let public_dir_files = public_dir::generate();
+            let root_dir_files = public_dir::generate();
+            let unprotected_dir_files = public_unprotected_dir::generate();
+
             let mut app = App::new()
                 .app_data(stored_cfg.clone())
                 .app_data(state.clone())
@@ -156,7 +167,8 @@ pub mod client {
             if in_debug_mode {
                 app = app.service(playground);
             }
-            app.service(ResourceFiles::new("/", public_dir_files))
+            app.service(ResourceFiles::new(UNPROTECTED_ROUTE, unprotected_dir_files).resolve_not_found_to("index.html"))
+               .service(ResourceFiles::new("/", root_dir_files))
         })
         .bind((cfg.client_http_ip, cfg.client_http_port))
         .map_err(|e| log::error!("Failed to bind client HTTP server: {}", e))?
@@ -176,6 +188,8 @@ pub mod client {
         payload: web::Payload,
         schema: web::Data<api::graphql::client::Schema>,
     ) -> Result<HttpResponse, Error> {
+
+        log::debug!("graphql : {}", req.path());
         let ctx = api::graphql::Context::new(req.clone());
         if req.head().upgrade() {
             let cfg = ConnectionConfig::new(ctx)
@@ -220,6 +234,15 @@ pub mod client {
             Some(h) => h,
             None => return Ok(req),
         };
+
+        let route = req.uri().path();
+        log::debug!("authorize URI PATH: {}", route);
+        let no_auth_required = route.starts_with(UNPROTECTED_ROUTE)
+            || route.starts_with("/api");
+
+        if no_auth_required {
+            return Ok(req);
+        }
 
         let err = || {
             AuthenticationError::new(
