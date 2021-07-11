@@ -11,6 +11,7 @@ actix-service = "1.0"
 actix-web = "3.3"
 actix-web-httpauth = "0.5"
 actix-web-static-files = "3.0"
+actix-files = "0.5.0"
 anyhow = "1.0"
 argon2 = { version = "0.8", package = "rust-argon2", default-features = false }
 askama = { version = "0.10", default-features = false }
@@ -54,6 +55,3 @@ uuid = { version = "0.8", features = ["serde", "v4"] }
     git = "https://github.com/zeromq/zmq.rs"
     rev = "5bc792a5b8876d7281e9bd933519d49a62b76caf" # tokio = "0.2"
 
-[build-dependencies]
-anyhow = "1.0"
-actix-web-static-files = "3.0"

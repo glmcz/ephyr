@@ -86,6 +86,7 @@ pub mod client {
     use std::time::Duration;
 
     use actix_service::Service as _;
+    use actix_files::Files;
     use actix_web::{
         dev::ServiceRequest, get, middleware, route, web, App, Error,
         HttpRequest, HttpResponse, HttpServer,
@@ -109,13 +110,6 @@ pub mod client {
         State,
     };
 
-    pub mod public_dir {
-        #![allow(clippy::must_use_candidate, unused_results)]
-        #![doc(hidden)]
-
-        include!(concat!(env!("OUT_DIR"), "/generated.rs"));
-    }
-
     /// Runs client HTTP server.
     ///
     /// Client HTTP server serves [`api::graphql::client`] on `/` endpoint.
@@ -133,13 +127,15 @@ pub mod client {
     ///
     /// [`cli::Opts::debug`]: crate::cli::Opts::debug
     /// [2]: https://github.com/graphql/graphql-playground
+
+
     pub async fn run(cfg: &Opts, state: State) -> Result<(), Failure> {
         let in_debug_mode = cfg.debug;
 
         let stored_cfg = cfg.clone();
 
         Ok(HttpServer::new(move || {
-            let public_dir_files = public_dir::generate();
+            //let public_dir_files = public_dir::generate();
             let mut app = App::new()
                 .app_data(stored_cfg.clone())
                 .app_data(state.clone())
@@ -156,7 +152,7 @@ pub mod client {
             if in_debug_mode {
                 app = app.service(playground);
             }
-            app.service(ResourceFiles::new("/", public_dir_files))
+            app.service(Files::new("/static", "./static/"))
         })
         .bind((cfg.client_http_ip, cfg.client_http_port))
         .map_err(|e| log::error!("Failed to bind client HTTP server: {}", e))?
