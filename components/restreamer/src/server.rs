@@ -151,7 +151,7 @@ pub mod client {
             if in_debug_mode {
                 app = app.service(playground);
             }
-            app.service(Files::new("/static", "./static/"))
+            app.service(Files::new("/", "/usr/local/share/ephyr-restreamer/static/"))
         })
         .bind((cfg.client_http_ip, cfg.client_http_port))
         .map_err(|e| log::error!("Failed to bind client HTTP server: {}", e))?

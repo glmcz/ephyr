@@ -72,7 +72,7 @@ WORKDIR /tmp/ephyr/components/front/
 #     ./
 
 RUN yarn install --pure-lockfile
-RUN ls -lR 
+RUN yarn build:prod
 
 
 # Finally, build the whole project.
@@ -109,5 +109,8 @@ COPY --from=build-srs /usr/local/srs/ /usr/local/srs/
 
 COPY --from=build-ephyr /tmp/ephyr/target/release/ephyr-restreamer \
                         /usr/local/bin/ephyr-restreamer
+
+COPY --from=build-ephyr /tmp/ephyr/components/front/public/ \
+                        /usr/local/share/ephyr-restreamer/static/
 
 ENTRYPOINT  ["/usr/local/bin/ephyr-restreamer"]
