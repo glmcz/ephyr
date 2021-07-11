@@ -7,6 +7,7 @@ const app = new App({
   props: {
     mainComponent: PageAll,
     toolbarComponent: Toolbar,
+    apiUrl: '/api',
   },
 });
 

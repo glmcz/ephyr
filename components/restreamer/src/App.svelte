@@ -12,6 +12,10 @@
   import { Info, State } from './api/graphql/client.graphql';
   import { showError } from './util';
 
+  export let mainComponent;
+  export let toolbarComponent;
+  export let apiUrl;
+
   import UIkit from 'uikit';
   import Icons from 'uikit/dist/js/uikit-icons';
 
@@ -23,7 +27,7 @@
 
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const wsClient = new SubscriptionClient(
-    `${protocol}://${window.location.hostname}/api`,
+    `${protocol}://${window.location.hostname}${apiUrl}`,
     { reconnect: true }
   );
   wsClient.onConnected(() => {
@@ -58,9 +62,6 @@
       }
     })
   );
-
-  export let mainComponent;
-  export let toolbarComponent;
 
   const routes = {
     '/id/:restream_id/output/:output_id': wrap({

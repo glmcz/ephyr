@@ -109,7 +109,8 @@ pub mod client {
         State,
     };
 
-    const UNPROTECTED_ROUTE: &str = "/restream";
+    const OUTPUT_ROUTE: &str = "/restream";
+    const OUTPUT_ROUTE_API: &str = "/api-out";
 
     pub mod public_dir {
         #![allow(clippy::must_use_candidate, unused_results)]
@@ -118,11 +119,11 @@ pub mod client {
         include!(concat!(env!("OUT_DIR"), "/generated.rs"));
     }
 
-    pub mod public_unprotected_dir {
+    pub mod public_output_dir {
         #![allow(clippy::must_use_candidate, unused_results)]
         #![doc(hidden)]
 
-        include!(concat!(env!("OUT_DIR"), "/generated_unprotected.rs"));
+        include!(concat!(env!("OUT_DIR"), "/generated_output.rs"));
     }
 
     /// Runs client HTTP server.
@@ -149,7 +150,7 @@ pub mod client {
 
         Ok(HttpServer::new(move || {
             let root_dir_files = public_dir::generate();
-            let unprotected_dir_files = public_unprotected_dir::generate();
+            let output_dir_files = public_output_dir::generate();
 
             let mut app = App::new()
                 .app_data(stored_cfg.clone())
@@ -163,12 +164,13 @@ pub mod client {
                     Ok(req) => srv.call(req).left_future(),
                     Err(e) => future::err(e).right_future(),
                 })
-                .service(graphql);
+                .service(graphql_main)
+                .service(graphql_output);
             if in_debug_mode {
                 app = app.service(playground);
             }
             app.service(
-                ResourceFiles::new(UNPROTECTED_ROUTE, unprotected_dir_files)
+                ResourceFiles::new(OUTPUT_ROUTE, output_dir_files)
                     .resolve_not_found_to("index.html"),
             )
             .service(ResourceFiles::new("/", root_dir_files))
@@ -180,12 +182,32 @@ pub mod client {
         .map_err(|e| log::error!("Failed to run client HTTP server: {}", e))?)
     }
 
-    /// Endpoint serving [`api::graphql::client`] directly.
+    /// Endpoint serving [`api::`graphql`::client`] for single output
+    /// application
+    #[route("/api-out", method = "GET", method = "POST")]
+    async fn graphql_output(
+        req: HttpRequest,
+        payload: web::Payload,
+        schema: web::Data<api::graphql::client::Schema>,
+    ) -> Result<HttpResponse, Error> {
+        graphql(req, payload, schema).await
+    }
+
+    /// Endpoint serving [`api::`graphql`::client`] for main application
+    #[route("/api", method = "GET", method = "POST")]
+    async fn graphql_main(
+        req: HttpRequest,
+        payload: web::Payload,
+        schema: web::Data<api::graphql::client::Schema>,
+    ) -> Result<HttpResponse, Error> {
+        graphql(req, payload, schema).await
+    }
+
+    /// Endpoint serving [`api::`graphql`::client`] directly
     ///
     /// # Errors
     ///
     /// If GraphQL operation execution errors or fails.
-    #[route("/api", method = "GET", method = "POST")]
     async fn graphql(
         req: HttpRequest,
         payload: web::Payload,
@@ -226,25 +248,23 @@ pub mod client {
     ///
     /// [1]: https://en.wikipedia.org/wiki/Basic_access_authentication
     fn authorize(req: ServiceRequest) -> Result<ServiceRequest, Error> {
-        let hash = match req
-            .app_data::<State>()
-            .unwrap()
-            .settings
-            .get_cloned()
-            .password_hash
-        {
+        let route = req.uri().path();
+        log::debug!("authorize URI PATH: {}", route);
+
+        let is_output_auth = route.starts_with(OUTPUT_ROUTE)
+            || route.starts_with(OUTPUT_ROUTE_API);
+        let settings = req.app_data::<State>().unwrap().settings.get_cloned();
+
+        let hash = if is_output_auth {
+            settings.password_output_hash
+        } else {
+            settings.password_hash
+        };
+
+        let hash = match hash {
             Some(h) => h,
             None => return Ok(req),
         };
-
-        let route = req.uri().path();
-        log::debug!("authorize URI PATH: {}", route);
-        let no_auth_required =
-            route.starts_with(UNPROTECTED_ROUTE) || route.starts_with("/api");
-
-        if no_auth_required {
-            return Ok(req);
-        }
 
         let err = || {
             AuthenticationError::new(

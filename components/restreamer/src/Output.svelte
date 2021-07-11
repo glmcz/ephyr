@@ -170,25 +170,30 @@
     {/if}
 
     <div class="output-mixes">
-      {#if value.status === 'ONLINE'}
-        <span><i class="fas fa-circle uk-alert-success" /></span>
-      {:else if value.status === 'INITIALIZING'}
-        <span><i class="fas fa-dot-circle uk-alert-warning" /></span>
-      {:else}
-        <span><i class="far fa-dot-circle uk-alert-danger" /></span>
-      {/if}
-      {#if value.dst.startsWith('file:///') && value.status === 'OFFLINE'}
-        <RecordsModal let:open id={value.id} {public_host}>
-          <a
-            class="dvr-link"
-            href="/"
-            on:click|preventDefault={open}
-            title="Download records">{value.dst}</a
-          >
-        </RecordsModal>
-      {:else}
-        <Url url={value.dst} previewUrl={value.previewUrl} />
-      {/if}
+      <div class="uk-flex uk-margin-small-bottom">
+        <span class="uk-margin-small-right status-indicator">
+          {#if value.status === 'ONLINE'}
+            <i class="fas fa-circle uk-alert-success" />
+          {:else if value.status === 'INITIALIZING'}
+            <i class="fas fa-dot-circle uk-alert-warning" />
+          {:else}
+            <i class="far fa-dot-circle uk-alert-danger" />
+          {/if}
+        </span>
+
+        {#if value.dst.startsWith('file:///') && value.status === 'OFFLINE'}
+          <RecordsModal let:open id={value.id} {public_host}>
+            <a
+              class="dvr-link"
+              href="/"
+              on:click|preventDefault={open}
+              title="Download records">{value.dst}</a
+            >
+          </RecordsModal>
+        {:else}
+          <Url url={value.dst} previewUrl={value.previewUrl} />
+        {/if}
+      </div>
 
       {#if value.mixins.length > 0}
         {#if !isOutputPage()}
@@ -201,7 +206,7 @@
           </a>
         {/if}
 
-        <div class="volume orig">
+        <div class="uk-flex volume orig">
           <a href="/" on:click|preventDefault={toggleVolume}>
             {#if volume > 0}
               <span><i class="fas fa-volume-up" title="Volume" /></span>
@@ -218,7 +223,7 @@
             bind:value={volume}
             on:change={tuneVolume}
           />
-          <span>{volume}%</span>
+          <span class="uk-margin-small-left">{volume}%</span>
         </div>
 
         {#each value.mixins as mixin}
@@ -288,6 +293,8 @@
       top: 0
       height: 100%
 
+  .status-indicator
+    flex-shrink: 0
   .fa-circle, .fa-dot-circle
     font-size: 10px
     margin-top: -1px
@@ -319,4 +326,5 @@
   .output-mixes
     width: calc(100% - 56px);
     margin-left: 4px
+
 </style>

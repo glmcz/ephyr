@@ -39,6 +39,7 @@
   }
 
   let openPasswordModal = false;
+  let openPasswordOutputModal = false;
   let openSettingsModal = false;
 </script>
 
@@ -71,8 +72,32 @@
     </a>
     {#if openPasswordModal}
       <PasswordModal
+        password_kind="MAIN"
         current_hash={info.data.info.passwordHash}
         bind:visible={openPasswordModal}
+      />
+    {/if}
+  {/key}
+  {#key info.data.info.passwordOutputHash}
+    <a
+      href="/"
+      class="set-output-password"
+      on:click|preventDefault={() => (openPasswordOutputModal = true)}
+    >
+      <i
+        class="fas"
+        class:fa-lock-open={!info.data.info.passwordOutputHash}
+        class:fa-lock={!!info.data.info.passwordOutputHash}
+        title="{!info.data.info.passwordOutputHash
+          ? 'Set'
+          : 'Change'} output password"
+      />
+    </a>
+    {#if openPasswordOutputModal}
+      <PasswordModal
+        password_kind="OUTPUT"
+        current_hash={info.data.info.passwordOutputHash}
+        bind:visible={openPasswordOutputModal}
       />
     {/if}
   {/key}
@@ -101,16 +126,17 @@
 </template>
 
 <style lang="stylus">
-  .set-password, .set-settings
+  .set-password, .set-settings, .set-output-password
     margin-right: 26px
-
-  .set-password, .set-settings
     font-size: 26px
     color: var(--primary-text-color)
     outline: none
     &:hover
       text-decoration: none
       color: #444
+
+  .set-output-password
+    opacity: 0.4
 
   .add-input
     position: relative

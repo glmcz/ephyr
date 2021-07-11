@@ -72,7 +72,7 @@
   <div class="mixin">
     <i class="fas fa-wave-square" title="Mixed audio" />
     <Url url={value.src} />
-    <div class="volume">
+    <div class="uk-flex volume">
       <a href="/" on:click|preventDefault={toggleVolume}>
         {#if volume > 0}
           <span><i class="fas fa-volume-up" title="Volume" /></span>
@@ -89,7 +89,7 @@
         bind:value={volume}
         on:change={tuneVolume}
       />
-      <span>{volume}%</span>
+      <span class="uk-margin-small-left">{volume}%</span>
     </div>
     <div class="delay">
       <i class="far fa-clock" title="Delay" />
