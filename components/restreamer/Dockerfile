@@ -61,14 +61,18 @@ RUN cargo build -p ephyr-restreamer --lib --release
 
 # Then, prepare Yarn dependencies to cache them in a separate Docker layer and
 # avoid recompilation each time project sources are changed.
-WORKDIR /tmp/ephyr/components/restreamer/
 
-COPY components/restreamer/.yarnrc \
-     components/restreamer/package.json \
-     components/restreamer/yarn.lock \
-     ./
+COPY components/front/ ./components/front/
+
+WORKDIR /tmp/ephyr/components/front/
+
+#COPY components/front/.yarnrc \
+#     components/front/package.json \
+#     components/front/yarn.lock \
+#     ./
 
 RUN yarn install --pure-lockfile
+RUN ls -lR 
 
 
 # Finally, build the whole project.
