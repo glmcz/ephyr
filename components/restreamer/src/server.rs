@@ -95,7 +95,6 @@ pub mod client {
         basic::{self, BasicAuth},
         AuthExtractor as _, AuthExtractorConfig, AuthenticationError,
     };
-    use actix_web_static_files::ResourceFiles;
     use ephyr_log::log;
     use futures::{future, FutureExt as _};
     use juniper::http::playground::playground_source;
