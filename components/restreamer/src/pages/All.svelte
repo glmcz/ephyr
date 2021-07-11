@@ -8,6 +8,7 @@
     DisableAllOutputsOfRestreams,
   } from '../api/graphql/client.graphql';
   import OutputModal from '../OutputModal.svelte';
+  import PasswordModal from '../PasswordModal.svelte';
 
   const enableAllOutputsOfRestreamsMutation = mutation(
     EnableAllOutputsOfRestreams
@@ -40,6 +41,8 @@
       showError(e.message);
     }
   }
+
+  let openPasswordOutputModal = false;
 </script>
 
 <template>
@@ -53,9 +56,32 @@
         >
       </div>
 
-      <span class="uk-width-expand toolbar-label"
-        >OUTPUTS: {totalOutputsCount}</span
-      >
+      <div class="uk-width-expand">
+        <span class="toolbar-label">OUTPUTS: {totalOutputsCount}</span>
+        {#key $info.data.info.passwordOutputHash}
+          <a
+            href="/"
+            class="set-output-password"
+            on:click|preventDefault={() => (openPasswordOutputModal = true)}
+          >
+            <i
+              class="fas"
+              class:fa-lock-open={!$info.data.info.passwordOutputHash}
+              class:fa-lock={!!$info.data.info.passwordOutputHash}
+              title="{!$info.data.info.passwordOutputHash
+                ? 'Set'
+                : 'Change'} output password"
+            />
+          </a>
+          {#if openPasswordOutputModal}
+            <PasswordModal
+              password_kind="OUTPUT"
+              current_hash={$info.data.info.passwordOutputHash}
+              bind:visible={openPasswordOutputModal}
+            />
+          {/if}
+        {/key}
+      </div>
       <div class="uk-panel uk-width-auto uk-flex-right">
         <Confirm let:confirm>
           <button
@@ -117,5 +143,12 @@
     border-top-left-radius: 4px
     border-top-right-radius: 4px
     background-color: #f8f8f8
+
+  .set-output-password
+    margin-left: 10px;
+    display: inline-block
+    color: var(--primary-text-color)
+    &:hover
+      color: #444
 
 </style>
