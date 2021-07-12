@@ -171,15 +171,19 @@
 
     <div class="output-mixes">
       <div class="uk-flex uk-margin-small-bottom">
-        <span class="uk-margin-small-right status-indicator">
-          {#if value.status === 'ONLINE'}
-            <i class="fas fa-circle uk-alert-success" />
-          {:else if value.status === 'INITIALIZING'}
-            <i class="fas fa-dot-circle uk-alert-warning" />
-          {:else}
-            <i class="far fa-dot-circle uk-alert-danger" />
-          {/if}
-        </span>
+        {#if value.status === 'ONLINE'}
+          <span class="uk-margin-small-right status-indicator"
+            ><i class="fas fa-circle uk-alert-success" /></span
+          >
+        {:else if value.status === 'INITIALIZING'}
+          <span class="uk-margin-small-right status-indicator"
+            ><i class="fas fa-dot-circle uk-alert-warning" /></span
+          >
+        {:else}
+          <span class="uk-margin-small-right status-indicator"
+            ><i class="far fa-dot-circle uk-alert-danger" /></span
+          >
+        {/if}
 
         {#if value.dst.startsWith('file:///') && value.status === 'OFFLINE'}
           <RecordsModal let:open id={value.id} {public_host}>
