@@ -72,7 +72,7 @@ WORKDIR /tmp/ephyr/components/front/
 #     ./
 
 RUN yarn install --pure-lockfile
-RUN yarn build:prod
+RUN yarn build:dev
 
 
 # Finally, build the whole project.
