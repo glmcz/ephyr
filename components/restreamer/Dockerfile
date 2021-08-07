@@ -63,10 +63,11 @@ RUN cargo build -p ephyr-restreamer --lib --release
 # avoid recompilation each time project sources are changed.
 
 COPY components/front/ ./components/front/
+COPY components/graphql/ ./components/graphql/
 
 WORKDIR /tmp/ephyr/components/front/
 
-RUN ls -lR
+RUN ls -lR ../
 #COPY components/front/.yarnrc \
 #     components/front/package.json \
 #     components/front/yarn.lock \
