@@ -67,12 +67,6 @@ COPY components/graphql/ ./components/graphql/
 
 WORKDIR /tmp/ephyr/components/front/
 
-RUN ls -lR ../
-#COPY components/front/.yarnrc \
-#     components/front/package.json \
-#     components/front/yarn.lock \
-#     ./
-
 RUN yarn install --pure-lockfile
 RUN yarn build:dev
 
