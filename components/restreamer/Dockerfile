@@ -68,7 +68,7 @@ COPY components/graphql/ ./components/graphql/
 WORKDIR /tmp/ephyr/components/front/
 
 RUN yarn install --pure-lockfile
-RUN yarn build:dev
+RUN yarn build:prod
 
 
 # Finally, build the whole project.
