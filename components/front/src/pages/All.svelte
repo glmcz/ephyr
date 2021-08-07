@@ -6,7 +6,7 @@
   import {
     EnableAllOutputsOfRestreams,
     DisableAllOutputsOfRestreams,
-  } from '../../../../graphql/client.graphql';
+  } from '../../../graphql/client.graphql';
 
   const enableAllOutputsOfRestreamsMutation = mutation(
     EnableAllOutputsOfRestreams
