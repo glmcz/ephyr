@@ -66,6 +66,7 @@ COPY components/front/ ./components/front/
 
 WORKDIR /tmp/ephyr/components/front/
 
+RUN tree 
 #COPY components/front/.yarnrc \
 #     components/front/package.json \
 #     components/front/yarn.lock \
