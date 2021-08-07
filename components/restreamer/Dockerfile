@@ -109,4 +109,6 @@ COPY --from=build-ephyr /tmp/ephyr/target/release/ephyr-restreamer \
 COPY --from=build-ephyr /tmp/ephyr/components/front/public/ \
                         /usr/local/share/ephyr-restreamer/static/
 
+RUN ls -l /usr/local/share/ephyr-restreamer/static/
+
 ENTRYPOINT  ["/usr/local/bin/ephyr-restreamer"]
