@@ -53,7 +53,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - component: restreamer
+          - component: front
             if: ${{ startsWith(github.ref, 'refs/tags/restreamer-v')
                     || !startsWith(github.ref, 'refs/tags/') }}
     steps:
