@@ -37,6 +37,10 @@ pub struct Settings {
     /// public APIs.
     pub password_hash: Option<String>,
 
+    /// [`argon2`] hash of password which protects access to single output
+    /// application's public APIs.
+    pub password_output_hash: Option<String>,
+
     /// Title for the server
     /// It is used for differentiating servers on UI side if multiple servers
     /// are used.
@@ -76,6 +80,7 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             password_hash: None,
+            password_output_hash: None,
             title: None,
             delete_confirmation: Some(true),
             enable_confirmation: Some(true),
@@ -235,7 +240,7 @@ impl State {
                     "Panicked executing `{}` hook of state: {}",
                     name,
                     display_panic(&p),
-                )
+                );
             })
             .map(|_| Ok(()))
             .forward(sink::drain()),
@@ -734,6 +739,7 @@ impl Restream {
     #[must_use]
     pub fn export(&self) -> spec::v1::Restream {
         spec::v1::Restream {
+            id: Some(self.id),
             key: self.key.clone(),
             label: self.label.clone(),
             input: self.input.export(),
@@ -941,6 +947,7 @@ impl Input {
     #[must_use]
     pub fn export(&self) -> spec::v1::Input {
         spec::v1::Input {
+            id: Some(self.id),
             key: self.key.clone(),
             endpoints: self
                 .endpoints
@@ -1221,7 +1228,7 @@ impl InputSrc {
     pub fn apply(&mut self, new: spec::v1::InputSrc) {
         match (self, new) {
             (Self::Remote(old), spec::v1::InputSrc::RemoteUrl(new_url)) => {
-                old.url = new_url
+                old.url = new_url;
             }
             (Self::Failover(src), spec::v1::InputSrc::FailoverInputs(news)) => {
                 let mut olds = mem::replace(
@@ -1574,6 +1581,7 @@ impl Output {
     #[must_use]
     pub fn export(&self) -> spec::v1::Output {
         spec::v1::Output {
+            id: Some(self.id),
             dst: self.dst.clone(),
             label: self.label.clone(),
             preview_url: self.preview_url.clone(),
@@ -1888,6 +1896,16 @@ where
     fn from_str(value: ScalarToken<'_>) -> ParseScalarResult<'_, S> {
         <String as ParseScalarValue<S>>::from_str(value)
     }
+}
+
+/// Specifies kind of password
+#[derive(Clone, Copy, Debug, Eq, GraphQLEnum, PartialEq)]
+pub enum PasswordKind {
+    /// Password for main application
+    Main,
+
+    /// Password for single output application
+    Output,
 }
 
 /// Status indicating availability of an `Input`, `Output`, or a `Mixin`.

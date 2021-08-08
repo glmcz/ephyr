@@ -26,7 +26,7 @@ pub async fn run(mut cfg: Opts) -> Result<(), Failure> {
             detect_public_ip()
                 .await
                 .ok_or_else(|| {
-                    log::error!("Cannot detect server's public IP address")
+                    log::error!("Cannot detect server's public IP address");
                 })?
                 .to_string(),
         );
@@ -34,7 +34,7 @@ pub async fn run(mut cfg: Opts) -> Result<(), Failure> {
 
     let ffmpeg_path =
         fs::canonicalize(&cfg.ffmpeg_path).await.map_err(|e| {
-            log::error!("Failed to resolve FFmpeg binary path: {}", e)
+            log::error!("Failed to resolve FFmpeg binary path: {}", e);
         })?;
 
     let state = State::try_new(&cfg.state_path)
@@ -109,6 +109,23 @@ pub mod client {
         State,
     };
 
+    const OUTPUT_ROUTE: &str = "/restream";
+    const OUTPUT_ROUTE_API: &str = "/api-out";
+
+    pub mod public_dir {
+        #![allow(clippy::must_use_candidate, unused_results)]
+        #![doc(hidden)]
+
+        include!(concat!(env!("OUT_DIR"), "/generated.rs"));
+    }
+
+    pub mod public_output_dir {
+        #![allow(clippy::must_use_candidate, unused_results)]
+        #![doc(hidden)]
+
+        include!(concat!(env!("OUT_DIR"), "/generated_output.rs"));
+    }
+
     /// Runs client HTTP server.
     ///
     /// Client HTTP server serves [`api::graphql::client`] on `/` endpoint.
@@ -133,7 +150,9 @@ pub mod client {
         let stored_cfg = cfg.clone();
 
         Ok(HttpServer::new(move || {
-            //let public_dir_files = public_dir::generate();
+            let root_dir_files = public_dir::generate();
+            let output_dir_files = public_output_dir::generate();
+
             let mut app = App::new()
                 .app_data(stored_cfg.clone())
                 .app_data(state.clone())
@@ -146,7 +165,8 @@ pub mod client {
                     Ok(req) => srv.call(req).left_future(),
                     Err(e) => future::err(e).right_future(),
                 })
-                .service(graphql);
+                .service(graphql_main)
+                .service(graphql_output);
             if in_debug_mode {
                 app = app.service(playground);
             }
@@ -162,17 +182,38 @@ pub mod client {
         .map_err(|e| log::error!("Failed to run client HTTP server: {}", e))?)
     }
 
-    /// Endpoint serving [`api::graphql::client`] directly.
+    /// Endpoint serving [`api::`graphql`::client`] for single output
+    /// application
+    #[route("/api-out", method = "GET", method = "POST")]
+    async fn graphql_output(
+        req: HttpRequest,
+        payload: web::Payload,
+        schema: web::Data<api::graphql::client::Schema>,
+    ) -> Result<HttpResponse, Error> {
+        graphql(req, payload, schema).await
+    }
+
+    /// Endpoint serving [`api::`graphql`::client`] for main application
+    #[route("/api", method = "GET", method = "POST")]
+    async fn graphql_main(
+        req: HttpRequest,
+        payload: web::Payload,
+        schema: web::Data<api::graphql::client::Schema>,
+    ) -> Result<HttpResponse, Error> {
+        graphql(req, payload, schema).await
+    }
+
+    /// Endpoint serving [`api::`graphql`::client`] directly
     ///
     /// # Errors
     ///
     /// If GraphQL operation execution errors or fails.
-    #[route("/api", method = "GET", method = "POST")]
     async fn graphql(
         req: HttpRequest,
         payload: web::Payload,
         schema: web::Data<api::graphql::client::Schema>,
     ) -> Result<HttpResponse, Error> {
+        log::debug!("graphql : {}", req.path());
         let ctx = api::graphql::Context::new(req.clone());
         if req.head().upgrade() {
             let cfg = ConnectionConfig::new(ctx)
@@ -187,6 +228,7 @@ pub mod client {
     /// [`api::graphql::client`].
     ///
     /// [1]: https://github.com/graphql/graphql-playground
+    #[allow(clippy::unused_async)]
     #[get("/api/playground")]
     async fn playground() -> HttpResponse {
         // Constructs API URL relatively to the current HTTP request's scheme
@@ -207,13 +249,20 @@ pub mod client {
     ///
     /// [1]: https://en.wikipedia.org/wiki/Basic_access_authentication
     fn authorize(req: ServiceRequest) -> Result<ServiceRequest, Error> {
-        let hash = match req
-            .app_data::<State>()
-            .unwrap()
-            .settings
-            .get_cloned()
-            .password_hash
-        {
+        let route = req.uri().path();
+        log::debug!("authorize URI PATH: {}", route);
+
+        let is_output_auth = route.starts_with(OUTPUT_ROUTE)
+            || route.starts_with(OUTPUT_ROUTE_API);
+        let settings = req.app_data::<State>().unwrap().settings.get_cloned();
+
+        let hash = if is_output_auth {
+            settings.password_output_hash
+        } else {
+            settings.password_hash
+        };
+
+        let hash = match hash {
             Some(h) => h,
             None => return Ok(req),
         };
@@ -272,7 +321,7 @@ pub mod callback {
         .run()
         .await
         .map_err(|e| {
-            log::error!("Failed to run callback HTTP server: {}", e)
+            log::error!("Failed to run callback HTTP server: {}", e);
         })?)
     }
 
@@ -284,6 +333,7 @@ pub mod callback {
     ///
     /// [SRS]: https://github.com/ossrs/srs
     /// [1]: https://github.com/ossrs/srs/wiki/v3_EN_HTTPCallback
+    #[allow(clippy::unused_async)]
     #[post("/")]
     async fn on_callback(
         req: web::Json<callback::Request>,

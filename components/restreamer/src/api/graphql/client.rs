@@ -24,6 +24,7 @@ use crate::{
 };
 
 use super::Context;
+use crate::state::PasswordKind;
 use url::Url;
 
 /// Full schema of [`api::graphql::client`].
@@ -160,6 +161,7 @@ impl MutationsRoot {
         let input_src = if with_backup {
             Some(spec::v1::InputSrc::FailoverInputs(vec![
                 spec::v1::Input {
+                    id: None,
                     key: InputKey::new("main").unwrap(),
                     endpoints: vec![spec::v1::InputEndpoint {
                         kind: InputEndpointKind::Rtmp,
@@ -168,6 +170,7 @@ impl MutationsRoot {
                     enabled: true,
                 },
                 spec::v1::Input {
+                    id: None,
                     key: InputKey::new("backup").unwrap(),
                     endpoints: vec![spec::v1::InputEndpoint {
                         kind: InputEndpointKind::Rtmp,
@@ -190,9 +193,11 @@ impl MutationsRoot {
         }
 
         let spec = spec::v1::Restream {
+            id: None,
             key,
             label,
             input: spec::v1::Input {
+                id: None,
                 key: InputKey::new("origin").unwrap(),
                 endpoints,
                 src: input_src,
@@ -374,6 +379,7 @@ impl MutationsRoot {
         }
 
         let spec = spec::v1::Output {
+            id: None,
             dst,
             label,
             preview_url,
@@ -641,14 +647,19 @@ impl MutationsRoot {
     fn set_password(
         new: Option<String>,
         old: Option<String>,
+        kind: Option<PasswordKind>,
         context: &Context,
     ) -> Result<bool, graphql::Error> {
         static HASH_CFG: Lazy<argon2::Config<'static>> =
             Lazy::new(argon2::Config::default);
 
-        let mut settings = context.state().settings.lock_mut();
+        let settings = context.state().settings.get_cloned();
+        let hash = match kind {
+            None | Some(PasswordKind::Main) => settings.password_hash,
+            Some(PasswordKind::Output) => settings.password_output_hash,
+        };
 
-        if let Some(hash) = &settings.password_hash {
+        if let Some(hash) = &hash {
             match old {
                 None => {
                     return Err(graphql::Error::new("NO_OLD_PASSWORD")
@@ -665,11 +676,11 @@ impl MutationsRoot {
             }
         }
 
-        if settings.password_hash.is_none() && new.is_none() {
+        if hash.is_none() && new.is_none() {
             return Ok(false);
         }
 
-        settings.password_hash = new.map(|v| {
+        let new_hash = new.map(|v| {
             argon2::hash_encoded(
                 v.as_bytes(),
                 &rand::thread_rng().gen::<[u8; 32]>(),
@@ -677,6 +688,16 @@ impl MutationsRoot {
             )
             .unwrap()
         });
+
+        let mut settings = context.state().settings.lock_mut();
+        match kind {
+            None | Some(PasswordKind::Main) => {
+                settings.password_hash = new_hash;
+            }
+            Some(PasswordKind::Output) => {
+                settings.password_output_hash = new_hash;
+            }
+        };
 
         Ok(true)
     }
@@ -734,6 +755,7 @@ impl QueriesRoot {
         Info {
             public_host: context.config().public_host.clone().unwrap(),
             password_hash: settings.password_hash,
+            password_output_hash: settings.password_output_hash,
             title: settings.title,
             delete_confirmation: settings.delete_confirmation,
             enable_confirmation: settings.enable_confirmation,
@@ -823,6 +845,7 @@ impl SubscriptionsRoot {
             .map(move |h| Info {
                 public_host: public_host.clone(),
                 password_hash: h.password_hash,
+                password_output_hash: h.password_output_hash,
                 title: h.title,
                 delete_confirmation: h.delete_confirmation,
                 enable_confirmation: h.enable_confirmation,
@@ -872,4 +895,7 @@ pub struct Info {
     /// [Argon2]: https://en.wikipedia.org/wiki/Argon2
     /// [1]: https://en.wikipedia.org/wiki/Basic_access_authentication
     pub password_hash: Option<String>,
+
+    /// Password hash for single output application
+    pub password_output_hash: Option<String>,
 }
