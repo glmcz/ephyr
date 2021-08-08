@@ -112,7 +112,6 @@ pub mod client {
     const OUTPUT_ROUTE: &str = "/restream";
     const OUTPUT_ROUTE_API: &str = "/api-out";
 
-
     /// Runs client HTTP server.
     ///
     /// Client HTTP server serves [`api::graphql::client`] on `/` endpoint.
