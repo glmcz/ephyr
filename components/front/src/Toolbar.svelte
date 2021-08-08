@@ -8,7 +8,8 @@
   import SettingsModal from './SettingsModal.svelte';
 
   import cloneDeep from 'lodash/cloneDeep';
-  import { ExportAllRestreams } from './api/graphql/client.graphql';
+  import { ExportAllRestreams } from '../../graphql/client.graphql';
+
   import { showError } from './util';
 
   export let info;
