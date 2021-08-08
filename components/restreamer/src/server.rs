@@ -85,8 +85,8 @@ pub async fn run(mut cfg: Opts) -> Result<(), Failure> {
 pub mod client {
     use std::time::Duration;
 
-    use actix_service::Service as _;
     use actix_files::Files;
+    use actix_service::Service as _;
     use actix_web::{
         dev::ServiceRequest, get, middleware, route, web, App, Error,
         HttpRequest, HttpResponse, HttpServer,
@@ -127,7 +127,6 @@ pub mod client {
     /// [`cli::Opts::debug`]: crate::cli::Opts::debug
     /// [2]: https://github.com/graphql/graphql-playground
 
-
     pub async fn run(cfg: &Opts, state: State) -> Result<(), Failure> {
         let in_debug_mode = cfg.debug;
 
@@ -151,7 +150,10 @@ pub mod client {
             if in_debug_mode {
                 app = app.service(playground);
             }
-            app.service(Files::new("/", "/usr/local/share/ephyr-restreamer/static/"))
+            app.service(Files::new(
+                "/",
+                "/usr/local/share/ephyr-restreamer/static/",
+            ))
         })
         .bind((cfg.client_http_ip, cfg.client_http_port))
         .map_err(|e| log::error!("Failed to bind client HTTP server: {}", e))?
