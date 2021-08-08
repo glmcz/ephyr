@@ -112,19 +112,6 @@ pub mod client {
     const OUTPUT_ROUTE: &str = "/restream";
     const OUTPUT_ROUTE_API: &str = "/api-out";
 
-    pub mod public_dir {
-        #![allow(clippy::must_use_candidate, unused_results)]
-        #![doc(hidden)]
-
-        include!(concat!(env!("OUT_DIR"), "/generated.rs"));
-    }
-
-    pub mod public_output_dir {
-        #![allow(clippy::must_use_candidate, unused_results)]
-        #![doc(hidden)]
-
-        include!(concat!(env!("OUT_DIR"), "/generated_output.rs"));
-    }
 
     /// Runs client HTTP server.
     ///
@@ -150,9 +137,6 @@ pub mod client {
         let stored_cfg = cfg.clone();
 
         Ok(HttpServer::new(move || {
-            let root_dir_files = public_dir::generate();
-            let output_dir_files = public_output_dir::generate();
-
             let mut app = App::new()
                 .app_data(stored_cfg.clone())
                 .app_data(state.clone())
