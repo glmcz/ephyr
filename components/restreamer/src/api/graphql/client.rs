@@ -17,19 +17,16 @@ use crate::{
     dvr, spec,
     state::{
         Delay, InputEndpointKind, InputId, InputKey, InputSrcUrl, Label,
-        MixinId, MixinSrcUrl, OutputDstUrl, OutputId, Restream, RestreamId,
-        RestreamKey, Volume,
+        MixinId, MixinSrcUrl, OutputDstUrl, OutputId, PasswordKind, Restream,
+        RestreamId, RestreamKey, Volume,
     },
     Spec,
 };
 
 use super::Context;
-use crate::state::PasswordKind;
 use url::Url;
 
-/// Full schema of [`api::graphql::client`].
-///
-/// [`api::graphql::client`]: graphql::client
+/// Schema of `Restreamer` app.
 pub type Schema =
     RootNode<'static, QueriesRoot, MutationsRoot, SubscriptionsRoot>;
 

@@ -1,5 +1,9 @@
 import clipboardCopy from 'clipboard-copy';
 import UIkit from 'uikit';
+import { SubscriptionClient } from 'subscriptions-transport-ws';
+import { ApolloClient } from '@apollo/client/core';
+import { WebSocketLink } from '@apollo/client/link/ws';
+import { InMemoryCache } from '@apollo/client/cache';
 
 /**
  * Displays an error UI popup with the given error `message`.
@@ -69,15 +73,35 @@ export function sanitizeUrl(url: string): string {
   return url.replace(/[\s]+/g, '');
 }
 
-/**
- * Checks whether the given location page corresponds to
- * `/restream/#/id/:restream_id/output/:output_id` route.
- */
-export function isOutputPage(): boolean {
+export function isMixPage(): boolean {
   const pathname = window.location.pathname;
   const p = window.location.hash.split('/');
 
-  return pathname === '/restream/' && p[3] === 'output';
+  return pathname === '/restream';
+}
+
+/**
+ * Creates graphQL client for specified apiUrl
+ **/
+export function createGraphQlClient(
+  apiUrl: string,
+  onConnect: Function,
+  onDisconnect: Function
+): ApolloClient<unknown> {
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const wsClient = new SubscriptionClient(
+    `${protocol}://${window.location.hostname}${apiUrl}`,
+    { reconnect: true }
+  );
+
+  wsClient.onConnected(() => onConnect());
+  wsClient.onReconnected(() => onConnect());
+  wsClient.onDisconnected(() => onDisconnect());
+
+  return new ApolloClient({
+    link: new WebSocketLink(wsClient),
+    cache: new InMemoryCache(),
+  });
 }
 
 const YT_VIDEO_REGEX = /(?:youtube(?:-nocookie)?\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;

@@ -507,6 +507,22 @@ impl State {
         Some(true)
     }
 
+    /// Get [Output] from [Restream] by `restream_id` and `output_id`
+    #[must_use]
+    pub fn get_output(
+        &self,
+        restream_id: RestreamId,
+        output_id: OutputId,
+    ) -> Option<Output> {
+        self.restreams
+            .get_cloned()
+            .into_iter()
+            .find(|r| r.id == restream_id)?
+            .outputs
+            .into_iter()
+            .find(|o| o.id == output_id)
+    }
+
     /// Enables all [`Output`]s in the specified [`Restream`] of this [`State`].
     ///
     /// Returns `true` if at least one [`Output`] has been enabled, or `false`

@@ -1,4 +1,4 @@
-import { ONLINE, OFFLINE, INITIALIZING } from '../constants/statuses';
+import { ONLINE, OFFLINE, INITIALIZING } from './constants/statuses';
 
 export const getAggregatedStreamsData = (streams) =>
   streams.reduce(

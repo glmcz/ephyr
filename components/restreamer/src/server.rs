@@ -110,7 +110,7 @@ pub mod client {
     };
 
     const OUTPUT_ROUTE: &str = "/restream";
-    const OUTPUT_ROUTE_API: &str = "/api-out";
+    const OUTPUT_ROUTE_API: &str = "/api-mix";
 
     pub mod public_dir {
         #![allow(clippy::must_use_candidate, unused_results)]
@@ -159,15 +159,16 @@ pub mod client {
                     basic::Config::default().realm("Any login is allowed"),
                 )
                 .data(api::graphql::client::schema())
+                .data(api::graphql::mix::schema())
                 .wrap(middleware::Logger::default())
                 .wrap_fn(|req, srv| match authorize(req) {
                     Ok(req) => srv.call(req).left_future(),
                     Err(e) => future::err(e).right_future(),
                 })
-                .service(graphql_main)
-                .service(graphql_output);
+                .service(graphql_client)
+                .service(graphql_mix);
             if in_debug_mode {
-                app = app.service(playground);
+                app = app.service(playground_client).service(playground_mix);
             }
             app.service(
                 ResourceFiles::new(OUTPUT_ROUTE, output_dir_files)
@@ -182,45 +183,66 @@ pub mod client {
         .map_err(|e| log::error!("Failed to run client HTTP server: {}", e))?)
     }
 
-    /// Endpoint serving [`api::`graphql`::client`] for single output
+    /// Either main or output schema
+    #[derive(Debug)]
+    pub enum SchemaKind {
+        /// Full schema
+        Schema(web::Data<api::graphql::client::Schema>),
+
+        /// Single output schema for mixing
+        SchemaMix(web::Data<api::graphql::mix::Schema>),
+    }
+
+    /// Endpoint serving [`api::`graphql`::mix`] for single output
     /// application
-    #[route("/api-out", method = "GET", method = "POST")]
-    async fn graphql_output(
+    #[route("/api-mix", method = "GET", method = "POST")]
+    async fn graphql_mix(
         req: HttpRequest,
         payload: web::Payload,
-        schema: web::Data<api::graphql::client::Schema>,
+        schema_mix: web::Data<api::graphql::mix::Schema>,
     ) -> Result<HttpResponse, Error> {
-        graphql(req, payload, schema).await
+        graphql(req, payload, SchemaKind::SchemaMix(schema_mix)).await
     }
 
     /// Endpoint serving [`api::`graphql`::client`] for main application
     #[route("/api", method = "GET", method = "POST")]
-    async fn graphql_main(
+    async fn graphql_client(
         req: HttpRequest,
         payload: web::Payload,
         schema: web::Data<api::graphql::client::Schema>,
     ) -> Result<HttpResponse, Error> {
-        graphql(req, payload, schema).await
+        graphql(req, payload, SchemaKind::Schema(schema)).await
     }
 
-    /// Endpoint serving [`api::`graphql`::client`] directly
-    ///
-    /// # Errors
-    ///
-    /// If GraphQL operation execution errors or fails.
     async fn graphql(
         req: HttpRequest,
         payload: web::Payload,
-        schema: web::Data<api::graphql::client::Schema>,
+        schema_kind: SchemaKind,
     ) -> Result<HttpResponse, Error> {
-        log::debug!("graphql : {}", req.path());
         let ctx = api::graphql::Context::new(req.clone());
         if req.head().upgrade() {
             let cfg = ConnectionConfig::new(ctx)
                 .with_keep_alive_interval(Duration::from_secs(5));
-            subscriptions_handler(req, payload, schema.into_inner(), cfg).await
+
+            match schema_kind {
+                SchemaKind::Schema(s) => {
+                    subscriptions_handler(req, payload, s.into_inner(), cfg)
+                        .await
+                }
+                SchemaKind::SchemaMix(s) => {
+                    subscriptions_handler(req, payload, s.into_inner(), cfg)
+                        .await
+                }
+            }
         } else {
-            graphql_handler(&schema, &ctx, req, payload).await
+            match schema_kind {
+                SchemaKind::Schema(s) => {
+                    graphql_handler(&s, &ctx, req, payload).await
+                }
+                SchemaKind::SchemaMix(s) => {
+                    graphql_handler(&s, &ctx, req, payload).await
+                }
+            }
         }
     }
 
@@ -228,8 +250,21 @@ pub mod client {
     /// [`api::graphql::client`].
     ///
     /// [1]: https://github.com/graphql/graphql-playground
-    #[allow(clippy::unused_async)]
     #[get("/api/playground")]
+    async fn playground_client() -> HttpResponse {
+        playground().await
+    }
+
+    /// Endpoint serving [GraphQL Playground][1] for exploring
+    /// [`api::graphql::mix`].
+    ///
+    /// [1]: https://github.com/graphql/graphql-playground
+    #[get("/api-mix/playground")]
+    async fn playground_mix() -> HttpResponse {
+        playground().await
+    }
+
+    #[allow(clippy::unused_async)]
     async fn playground() -> HttpResponse {
         // Constructs API URL relatively to the current HTTP request's scheme
         // and authority.

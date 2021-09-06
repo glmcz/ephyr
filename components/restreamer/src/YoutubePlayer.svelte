@@ -1,9 +1,8 @@
 <script lang="js">
   import { onMount } from 'svelte';
-  import { getYoutubeVideoID } from '../util';
+  import { getYoutubeVideoID } from './util';
 
   export let preview_url;
-
   let iframeVideoURL = '';
 
   onMount(() => {
@@ -34,12 +33,10 @@
         height: 0
         overflow: hidden
 
-    .wise-iframe-wrapper iframe,
-    .wise-iframe-wrapper object,
-    .wise-iframe-wrapper embed
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        iframe
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
 </style>

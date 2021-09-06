@@ -5,9 +5,14 @@
 
   import {
     RemoveRestream,
+    DisableOutput,
     DisableAllOutputs,
     EnableAllOutputs,
+    EnableOutput,
     ExportRestream,
+    RemoveOutput,
+    TuneDelay,
+    TuneVolume,
     Info,
   } from './api/graphql/client.graphql';
 
@@ -36,6 +41,14 @@
   export let value;
   export let globalOutputsFilters;
   export let hidden = false;
+
+  let outputMutations = {
+    DisableOutput,
+    EnableOutput,
+    RemoveOutput,
+    TuneVolume,
+    TuneDelay,
+  };
 
   $: deleteConfirmation = $info.data
     ? $info.data.info.deleteConfirmation
@@ -241,11 +254,14 @@
     <div class="uk-grid uk-grid-small" uk-grid>
       {#each value.outputs as output}
         <Output
+          {deleteConfirmation}
+          {enableConfirmation}
           {public_host}
           restream_id={value.id}
           value={output}
           hidden={hasActiveFilters &&
             !reStreamOutputsFilters.includes(output.status)}
+          mutations={outputMutations}
         />
       {:else}
         <div class="uk-flex-1">

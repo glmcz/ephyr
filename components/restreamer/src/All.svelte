@@ -1,19 +1,20 @@
 <script lang="js">
   import { mutation } from 'svelte-apollo';
 
-  import Restream from '../Restream.svelte';
-  import Confirm from '../Confirm.svelte';
-  import StatusFilter from '../components/common/StatusFilter';
-  import { showError } from '../util';
+  import Confirm from './Confirm.svelte';
+  import StatusFilter from './components/common/StatusFilter';
+  import { showError } from './util';
   import {
-    EnableAllOutputsOfRestreams,
     DisableAllOutputsOfRestreams,
-  } from '../api/graphql/client.graphql';
-  import OutputModal from '../OutputModal.svelte';
-  import PasswordModal from '../PasswordModal.svelte';
+    EnableAllOutputsOfRestreams,
+  } from './api/graphql/client.graphql';
+  import OutputModal from './OutputModal.svelte';
+  import PasswordModal from './PasswordModal.svelte';
   import { getAggregatedStreamsData } from './allHelpers';
-  import { statusesList } from '../constants/statuses';
-  import { toggleFilterStatus } from '../utils/statusFilters.util';
+  import { statusesList } from './constants/statuses';
+  import { toggleFilterStatus } from './utils/statusFilters.util';
+  import { onDestroy } from 'svelte';
+  import Restream from './Restream.svelte';
 
   const enableAllOutputsOfRestreamsMutation = mutation(
     EnableAllOutputsOfRestreams
@@ -31,6 +32,23 @@
   $: globalInputsFilters = [];
   $: globalOutputsFilters = [];
   $: hasActiveFilters = globalInputsFilters.length;
+
+  let currentHash = undefined;
+  onDestroy(
+    info.subscribe((i) => {
+      if (i.data) {
+        const newHash = i.data.info.passwordHash;
+        if (currentHash === undefined) {
+          currentHash = newHash;
+        } else if (!!newHash && newHash !== currentHash) {
+          window.location.reload();
+        }
+
+        const title = i.data.info.title;
+        document.title = title || 'Ephyr re-streamer';
+      }
+    })
+  );
 
   async function enableAllOutputsOfRestreams() {
     try {

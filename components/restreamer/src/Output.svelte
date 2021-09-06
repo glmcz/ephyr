@@ -1,15 +1,6 @@
 <script lang="js">
-  import { mutation, subscribe } from 'svelte-apollo';
-
-  import {
-    DisableOutput,
-    EnableOutput,
-    Info,
-    RemoveOutput,
-    TuneVolume,
-  } from './api/graphql/client.graphql';
-
-  import { showError, isOutputPage } from './util';
+  import { mutation } from 'svelte-apollo';
+  import { showError, isMixPage } from './util';
 
   import { outputModal } from './stores';
 
@@ -19,17 +10,25 @@
   import RecordsModal from './RecordsModal.svelte';
   import Url from './Url.svelte';
 
-  const disableOutputMutation = mutation(DisableOutput);
-  const enableOutputMutation = mutation(EnableOutput);
-  const removeOutputMutation = mutation(RemoveOutput);
-  const tuneVolumeMutation = mutation(TuneVolume);
-
-  const info = subscribe(Info, { errorPolicy: 'all' });
-
   export let public_host;
   export let value;
   export let restream_id;
   export let hidden = false;
+  export let deleteConfirmation;
+  export let enableConfirmation;
+  export let mutations;
+
+  const disableOutputMutation = mutations.DisableOutput
+    ? mutation(mutations.DisableOutput)
+    : undefined;
+  const enableOutputMutation = mutations.EnableOutput
+    ? mutation(mutations.EnableOutput)
+    : undefined;
+  const removeOutputMutation = mutations.RemoveOutput
+    ? mutation(mutations.RemoveOutput)
+    : undefined;
+
+  const tuneVolumeMutation = mutation(mutations.TuneVolume);
 
   let volume = 100;
   $: {
@@ -39,14 +38,6 @@
     // it is changed, as we're only interested in `value` changes here.
     update_volume();
   }
-
-  $: deleteConfirmation = $info.data
-    ? $info.data.info.deleteConfirmation
-    : true;
-
-  $: enableConfirmation = $info.data
-    ? $info.data.info.enableConfirmation
-    : true;
 
   $: toggleStatusText = value.enabled ? 'Disable' : 'Enable';
 
@@ -112,10 +103,10 @@
   <div
     class="uk-card uk-card-default uk-card-body uk-flex"
     class:hidden
-    class:grouped={!isOutputPage()}
-    class:uk-margin-left={!isOutputPage()}
+    class:grouped={!isMixPage()}
+    class:uk-margin-left={!isMixPage()}
   >
-    {#if !isOutputPage()}
+    {#if !isMixPage()}
       <Confirm let:confirm>
         <button
           type="button"
@@ -141,7 +132,7 @@
       <span class="label" title={value.label}>{value.label}</span>
     {/if}
 
-    {#if !isOutputPage()}
+    {#if !isMixPage()}
       <div class="left-buttons-area" />
       <a
         class="edit-output"
@@ -200,10 +191,10 @@
       </div>
 
       {#if value.mixins.length > 0}
-        {#if !isOutputPage()}
+        {#if !isMixPage()}
           <a
             class="single-view"
-            href="/restream/#/id/{restream_id}/output/{value.id}"
+            href="/restream?id={restream_id}&output={value.id}"
             target="_blank"
             title="Open in a separate window"
             ><i class="fas fa-external-link-alt" />
@@ -231,7 +222,7 @@
         </div>
 
         {#each value.mixins as mixin}
-          <Mixin {restream_id} output_id={value.id} value={mixin} />
+          <Mixin {restream_id} output_id={value.id} value={mixin} {mutations} />
         {/each}
       {/if}
     </div>
