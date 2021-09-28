@@ -1253,6 +1253,12 @@
             "description": "Active, all operations are performing successfully and media traffic\nflows as expected.",
             "isDeprecated": false,
             "deprecationReason": null
+          },
+          {
+            "name": "UNSTABLE",
+            "description": "Failed not more 10 sec ago",
+            "isDeprecated": false,
+            "deprecationReason": null
           }
         ],
         "possibleTypes": null

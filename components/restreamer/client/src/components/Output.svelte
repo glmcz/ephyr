@@ -170,6 +170,10 @@
           <span class="uk-margin-small-right status-indicator"
             ><i class="fas fa-dot-circle uk-alert-warning" /></span
           >
+        {:else if value.status === 'UNSTABLE'}
+          <span class="uk-margin-small-right status-indicator"
+          ><i class="fas fa-dot-circle uk-alert-primary" /></span
+          >
         {:else}
           <span class="uk-margin-small-right status-indicator"
             ><i class="far fa-dot-circle uk-alert-danger" /></span
