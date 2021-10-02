@@ -1256,7 +1256,7 @@
           },
           {
             "name": "UNSTABLE",
-            "description": "Failed not more 10 sec ago",
+            "description": "Failed recently",
             "isDeprecated": false,
             "deprecationReason": null
           }
