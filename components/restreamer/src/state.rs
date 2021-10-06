@@ -366,6 +366,31 @@ impl State {
             .map(Input::disable)
     }
 
+    ///
+    ///
+    /// Returns `true` if it has been disabled, or `false` if it already has
+    /// been disabled, or [`None`] if it doesn't exist.
+    #[must_use]
+    pub fn change_endpoint_label(
+        &self,
+        id: InputId,
+        restream_id: RestreamId,
+        endpoint_id: EndpointId,
+        label: Option<Label>
+    ) -> Option<bool> {
+        self.restreams
+            .lock_mut()
+            .iter_mut()
+            .find(|r| r.id == restream_id)?
+            .input
+            .find_mut(id)?
+            .endpoints
+                .iter_mut()
+                .find(|endpoint| endpoint.id == endpoint_id)?
+                .label = label;
+        Some(true)
+    }
+
     /// Adds a new [`Output`] to the specified [`Restream`] of this [`State`].
     ///
     /// Returns [`None`] if there is no [`Restream`] with such `id` in this
@@ -1068,6 +1093,10 @@ pub struct InputEndpoint {
     /// Kind of this `InputEndpoint`.
     pub kind: InputEndpointKind,
 
+    /// User defined label for each Endpoint
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<Label>,
+
     /// `Status` of this `InputEndpoint` indicating whether it actually serves a
     /// live stream ready to be consumed by `Output`s and clients.
     #[serde(skip)]
@@ -1100,6 +1129,7 @@ impl InputEndpoint {
             id: EndpointId::random(),
             kind: spec.kind,
             status: Status::Offline,
+            label: None,
             srs_publisher_id: None,
             srs_player_ids: HashSet::new(),
         }
@@ -1228,7 +1258,7 @@ impl InputSrc {
     pub fn new(spec: spec::v1::InputSrc) -> Self {
         match spec {
             spec::v1::InputSrc::RemoteUrl(url) => {
-                Self::Remote(RemoteInputSrc { url })
+                Self::Remote(RemoteInputSrc { url, label: None })
             }
             spec::v1::InputSrc::FailoverInputs(inputs) => {
                 Self::Failover(FailoverInputSrc {
@@ -1289,6 +1319,9 @@ impl InputSrc {
 pub struct RemoteInputSrc {
     /// URL of this `RemoteInputSrc`.
     pub url: InputSrcUrl,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<Label>,
 }
 
 /// Failover source of multiple `Input`s to pull a live stream by an `Input`

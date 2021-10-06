@@ -343,6 +343,75 @@
             "deprecationReason": null
           },
           {
+            "name": "changeEndpointLabel",
+            "description": "Sets an `Input`'s endpoint label by `Input` and `Endpoint` `id`.\n\n### Result\n\nReturns `true` if the label has been set with the given `label`,\n`false` if it was not, and `null` if the `Input` or `Endpoint` doesn't exist.",
+            "args": [
+              {
+                "name": "id",
+                "description": "ID of the `Input` to be changed.",
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "InputId",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null
+              },
+              {
+                "name": "restreamId",
+                "description": "ID of the `Restream` to disable the `Input` in.",
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "RestreamId",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null
+              },
+              {
+                "name": "endpointId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "EndpointId",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null
+              },
+              {
+                "name": "label",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Label",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null
+              }
+            ],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Boolean",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "setOutput",
             "description": "Sets a new `Output` or updates an existing one (if `id` is specified).\n\n### Idempotency\n\nIdempotent if `id` is specified. Otherwise is non-idempotent, always\ncreates a new `Output` and errors on the `dst` duplicates within the\nspecified `Restream`.\n\n### Result\n\nReturns `null` if a `Restream` with the given `restreamId` doesn't\nexist, or an `Output` with the given `id` doesn't exist, otherwise\nalways returns `true`.",
             "args": [
@@ -1394,6 +1463,18 @@
             "deprecationReason": null
           },
           {
+            "name": "label",
+            "description": "User defined label for each Endpoint",
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Label",
+              "ofType": null
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "status",
             "description": "`Status` of this `InputEndpoint` indicating whether it actually serves a\nlive stream ready to be consumed by `Output`s and clients.",
             "args": [],
@@ -2410,6 +2491,18 @@
                 "name": "InputSrcUrl",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "label",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "SCALAR",
+              "name": "Label",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null

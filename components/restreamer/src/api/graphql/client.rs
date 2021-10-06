@@ -25,6 +25,7 @@ use crate::{
 
 use super::Context;
 use url::Url;
+use crate::state::EndpointId;
 
 /// Schema of `Restreamer` app.
 pub type Schema =
@@ -303,6 +304,38 @@ impl MutationsRoot {
         context: &Context,
     ) -> Option<bool> {
         context.state().disable_input(id, restream_id)
+    }
+
+    /// Sets an `Input`'s endpoint label by `Input` and `Endpoint` `id`.
+    ///
+    /// ### Result
+    ///
+    /// Returns `true` if the label has been set with the given `label`,
+    /// `false` if it was not, and `null` if the `Input` or `Endpoint` doesn't exist.
+    #[graphql(arguments(
+    id(description = "ID of the `Input` to be changed."),
+    restream_id(description = "ID of the `Restream` to disable the \
+                                   `Input` in."),
+    endpoint_id(),
+    label(),
+    ))]
+    fn change_endpoint_label(
+        id: InputId,
+        restream_id: RestreamId,
+        endpoint_id: EndpointId,
+        label: String,
+        context: &Context,
+    ) -> Option<bool> {
+        if label.is_empty() {
+            context.state().change_endpoint_label(id, restream_id, endpoint_id, None)
+        } else {
+            let label_opt: Option<Label> = Label::new(label);
+            if label_opt.is_some() {
+                context.state().change_endpoint_label(id, restream_id, endpoint_id, label_opt)
+            } else {
+                Some(false)
+            }
+        }
     }
 
     /// Sets a new `Output` or updates an existing one (if `id` is specified).
