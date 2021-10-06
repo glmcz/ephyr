@@ -4,6 +4,7 @@
 
 pub mod client;
 pub mod mix;
+pub mod dashboard;
 
 use std::{borrow::Cow, convert::Infallible, fmt, ops::Deref};
 
