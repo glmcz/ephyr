@@ -7,7 +7,7 @@
 
   import Toggle from './common/Toggle.svelte';
   import Confirm from './common/Confirm.svelte';
-  import InputEndpoint from "./InputEndpoint.svelte";
+  import InputEndpoint from './InputEndpoint.svelte';
 
   const disableInputMutation = mutation(DisableInput);
   const enableInputMutation = mutation(EnableInput);
@@ -46,10 +46,6 @@
     else if (isPull) return value.src.url;
     else return `rtmp://${public_host}/${restream_key}/${value.key}`;
   }
-
-  function editLabel(endpoint, label_component) {
-    label_component.innerHTML = endpoint.kind;
-  }
 </script>
 
 <template>
@@ -69,10 +65,11 @@
     </Confirm>
     <div class="endpoints">
       {#each value.endpoints as endpoint}
-        <InputEndpoint endpoint="{endpoint}"
-                       input="{value}"
-                       input_url="{getInputUrl(endpoint)}"
-                       restream_id="{restream_id}"
+        <InputEndpoint
+          {endpoint}
+          input={value}
+          input_url={getInputUrl(endpoint)}
+          {restream_id}
         />
       {/each}
     </div>

@@ -1320,6 +1320,7 @@ pub struct RemoteInputSrc {
     /// URL of this `RemoteInputSrc`.
     pub url: InputSrcUrl,
 
+    /// Label for this Endpoint
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Label>,
 }
