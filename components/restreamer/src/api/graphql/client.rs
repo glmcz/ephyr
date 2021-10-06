@@ -311,7 +311,8 @@ impl MutationsRoot {
     /// ### Result
     ///
     /// Returns `true` if the label has been set with the given `label`,
-    /// `false` if it was not, and `null` if the `Input` or `Endpoint` doesn't exist.
+    /// `false` if it was not
+    /// `null` if the `Input` or `Endpoint` doesn't exist.
     #[graphql(arguments(
     id(description = "ID of the `Input` to be changed."),
     restream_id(description = "ID of the `Restream` to disable the \
