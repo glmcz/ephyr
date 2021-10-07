@@ -126,6 +126,13 @@ pub mod client {
         include!(concat!(env!("OUT_DIR"), "/generated_mix.rs"));
     }
 
+    pub mod public_dashboard_dir {
+        #![allow(clippy::must_use_candidate, unused_results)]
+        #![doc(hidden)]
+
+        include!(concat!(env!("OUT_DIR"), "/generated_dashboard.rs"));
+    }
+
     /// Runs client HTTP server.
     ///
     /// Client HTTP server serves [`api::graphql::client`] on `/` endpoint.
@@ -150,7 +157,8 @@ pub mod client {
 
         Ok(HttpServer::new(move || {
             let root_dir_files = public_dir::generate();
-            let output_dir_files = public_mix_dir::generate();
+            let mix_dir_files = public_mix_dir::generate();
+            let dashboard_dir_files = public_dashboard_dir::generate();
 
             let mut app = App::new()
                 .app_data(stored_cfg.clone())
@@ -160,18 +168,27 @@ pub mod client {
                 )
                 .data(api::graphql::client::schema())
                 .data(api::graphql::mix::schema())
+                .data(api::graphql::dashboard::schema())
                 .wrap(middleware::Logger::default())
                 .wrap_fn(|req, srv| match authorize(req) {
                     Ok(req) => srv.call(req).left_future(),
                     Err(e) => future::err(e).right_future(),
                 })
                 .service(graphql_client)
-                .service(graphql_mix);
+                .service(graphql_mix)
+                .service(graphql_dashboard);
             if in_debug_mode {
-                app = app.service(playground_client).service(playground_mix);
+                app = app
+                    .service(playground_client)
+                    .service(playground_mix)
+                    .service(playground_dashboard);
             }
             app.service(
-                ResourceFiles::new(MIX_ROUTE, output_dir_files)
+                ResourceFiles::new(MIX_ROUTE, mix_dir_files)
+                    .resolve_not_found_to("index.html"),
+            )
+            .service(
+                ResourceFiles::new("/dashboard", dashboard_dir_files)
                     .resolve_not_found_to("index.html"),
             )
             .service(ResourceFiles::new("/", root_dir_files))
@@ -191,6 +208,17 @@ pub mod client {
 
         /// Single output schema for mixing
         SchemaMix(web::Data<api::graphql::mix::Schema>),
+    }
+
+    /// Endpoint serving [`api::`graphql`::dashboard`] application
+    #[route("/api-dashboard", method = "GET", method = "POST")]
+    async fn graphql_dashboard(
+        req: HttpRequest,
+        payload: web::Payload,
+        schema: web::Data<api::graphql::dashboard::Schema>,
+    ) -> Result<HttpResponse, Error> {
+        let ctx = api::graphql::Context::new(req.clone());
+        graphql_handler(&schema, &ctx, req, payload).await
     }
 
     /// Endpoint serving [`api::`graphql`::mix`] for single output
@@ -263,6 +291,16 @@ pub mod client {
     async fn playground_mix() -> HttpResponse {
         playground().await
     }
+
+    /// Endpoint serving [GraphQL Playground][1] for exploring
+    /// [`api::graphql::dashboard`].
+    ///
+    /// [1]: https://github.com/graphql/graphql-playground
+    #[get("/api-dashboard/playground")]
+    async fn playground_dashboard() -> HttpResponse {
+        playground().await
+    }
+
 
     #[allow(clippy::unused_async)]
     async fn playground() -> HttpResponse {
