@@ -24,6 +24,7 @@ use crate::{
 };
 
 use super::Context;
+use crate::state::EndpointId;
 use url::Url;
 
 /// Schema of `Restreamer` app.
@@ -162,6 +163,7 @@ impl MutationsRoot {
                     key: InputKey::new("main").unwrap(),
                     endpoints: vec![spec::v1::InputEndpoint {
                         kind: InputEndpointKind::Rtmp,
+                        label: None,
                     }],
                     src: src.map(spec::v1::InputSrc::RemoteUrl),
                     enabled: true,
@@ -171,6 +173,7 @@ impl MutationsRoot {
                     key: InputKey::new("backup").unwrap(),
                     endpoints: vec![spec::v1::InputEndpoint {
                         kind: InputEndpointKind::Rtmp,
+                        label: None,
                     }],
                     src: backup_src.map(spec::v1::InputSrc::RemoteUrl),
                     enabled: true,
@@ -182,10 +185,12 @@ impl MutationsRoot {
 
         let mut endpoints = vec![spec::v1::InputEndpoint {
             kind: InputEndpointKind::Rtmp,
+            label: None,
         }];
         if with_hls {
             endpoints.push(spec::v1::InputEndpoint {
                 kind: InputEndpointKind::Hls,
+                label: None,
             });
         }
 
@@ -303,6 +308,48 @@ impl MutationsRoot {
         context: &Context,
     ) -> Option<bool> {
         context.state().disable_input(id, restream_id)
+    }
+
+    /// Sets an `Input`'s endpoint label by `Input` and `Endpoint` `id`.
+    ///
+    /// ### Result
+    ///
+    /// Returns `true` if the label has been set with the given `label`,
+    /// `false` if it was not
+    /// `null` if the `Input` or `Endpoint` doesn't exist.
+    #[graphql(arguments(
+        id(description = "ID of the `Input` to be changed."),
+        restream_id(description = "ID of the `Restream` to change."),
+        endpoint_id(),
+        label(),
+    ))]
+    fn change_endpoint_label(
+        id: InputId,
+        restream_id: RestreamId,
+        endpoint_id: EndpointId,
+        label: String,
+        context: &Context,
+    ) -> Option<bool> {
+        if label.is_empty() {
+            context.state().change_endpoint_label(
+                id,
+                restream_id,
+                endpoint_id,
+                None,
+            )
+        } else {
+            let label_opt: Option<Label> = Label::new(label);
+            if label_opt.is_some() {
+                context.state().change_endpoint_label(
+                    id,
+                    restream_id,
+                    endpoint_id,
+                    label_opt,
+                )
+            } else {
+                Some(false)
+            }
+        }
     }
 
     /// Sets a new `Output` or updates an existing one (if `id` is specified).
