@@ -23,6 +23,7 @@ use crate::{
     display_panic, dvr,
     state::{self, Delay, MixinId, MixinSrcUrl, State, Status, Volume},
     teamspeak,
+    types::DroppableAbortHandle,
 };
 use chrono::{DateTime, Utc};
 use std::result::Result::Err;
@@ -304,7 +305,7 @@ impl Restreamer {
         })));
 
         Self {
-            abort: DroppableAbortHandle(abort_handle),
+            abort: DroppableAbortHandle::new(abort_handle),
             kind,
         }
     }
@@ -1165,19 +1166,6 @@ impl Mixin {
     #[must_use]
     pub fn needs_restart(&self, actual: &Self) -> bool {
         self.url != actual.url || self.delay != actual.delay
-    }
-}
-
-/// Abort handle of a spawned [FFmpeg] [`Restreamer`] process.
-///
-/// [FFmpeg]: https://ffmpeg.org
-#[derive(Clone, Debug)]
-pub struct DroppableAbortHandle(future::AbortHandle);
-
-impl Drop for DroppableAbortHandle {
-    #[inline]
-    fn drop(&mut self) {
-        self.0.abort();
     }
 }
 

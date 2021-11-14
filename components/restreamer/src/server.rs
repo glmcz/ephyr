@@ -8,7 +8,7 @@ use tokio::{fs, time};
 
 use crate::{
     cli::{Failure, Opts},
-    dvr, ffmpeg, srs, teamspeak, State,
+    client_stat, dvr, ffmpeg, srs, teamspeak, State,
 };
 
 /// Initializes and runs all application's HTTP servers.
@@ -68,6 +68,12 @@ pub async fn run(mut cfg: Opts) -> Result<(), Failure> {
         future::ready(())
     });
 
+    let mut client_jobs = client_stat::ClientJobsPool::new(state.clone());
+    State::on_change("spawn_client_jobs", &state.clients, move |clients| {
+        client_jobs.apply(&clients);
+        future::ready(())
+    });
+
     future::try_join(
         self::client::run(&cfg, state.clone()),
         self::callback::run(&cfg, state),
@@ -108,9 +114,12 @@ pub mod client {
         cli::{Failure, Opts},
         State,
     };
+    use std::fmt;
 
     const MIX_ROUTE: &str = "/mix";
     const MIX_ROUTE_API: &str = "/api-mix";
+    const STATISTICS_ROUTE_API: &str = "/api-statistics";
+    const INDEX_FILE: &str = "index.html";
 
     pub mod public_dir {
         #![allow(clippy::must_use_candidate, unused_results)]
@@ -124,6 +133,13 @@ pub mod client {
         #![doc(hidden)]
 
         include!(concat!(env!("OUT_DIR"), "/generated_mix.rs"));
+    }
+
+    pub mod public_dashboard_dir {
+        #![allow(clippy::must_use_candidate, unused_results)]
+        #![doc(hidden)]
+
+        include!(concat!(env!("OUT_DIR"), "/generated_dashboard.rs"));
     }
 
     /// Runs client HTTP server.
@@ -150,7 +166,8 @@ pub mod client {
 
         Ok(HttpServer::new(move || {
             let root_dir_files = public_dir::generate();
-            let output_dir_files = public_mix_dir::generate();
+            let mix_dir_files = public_mix_dir::generate();
+            let dashboard_dir_files = public_dashboard_dir::generate();
 
             let mut app = App::new()
                 .app_data(stored_cfg.clone())
@@ -160,19 +177,31 @@ pub mod client {
                 )
                 .data(api::graphql::client::schema())
                 .data(api::graphql::mix::schema())
+                .data(api::graphql::dashboard::schema())
+                .data(api::graphql::statistics::schema())
                 .wrap(middleware::Logger::default())
                 .wrap_fn(|req, srv| match authorize(req) {
                     Ok(req) => srv.call(req).left_future(),
                     Err(e) => future::err(e).right_future(),
                 })
                 .service(graphql_client)
-                .service(graphql_mix);
+                .service(graphql_mix)
+                .service(graphql_statistics)
+                .service(graphql_dashboard);
             if in_debug_mode {
-                app = app.service(playground_client).service(playground_mix);
+                app = app
+                    .service(playground_client)
+                    .service(playground_mix)
+                    .service(playground_statistics)
+                    .service(playground_dashboard);
             }
             app.service(
-                ResourceFiles::new(MIX_ROUTE, output_dir_files)
-                    .resolve_not_found_to("index.html"),
+                ResourceFiles::new(MIX_ROUTE, mix_dir_files)
+                    .resolve_not_found_to(INDEX_FILE),
+            )
+            .service(
+                ResourceFiles::new("/dashboard", dashboard_dir_files)
+                    .resolve_not_found_to(INDEX_FILE),
             )
             .service(ResourceFiles::new("/", root_dir_files))
         })
@@ -183,14 +212,46 @@ pub mod client {
         .map_err(|e| log::error!("Failed to run client HTTP server: {}", e))?)
     }
 
-    /// Either main or output schema
-    #[derive(Debug)]
+    /// List of schemes
     pub enum SchemaKind {
         /// Full schema
         Schema(web::Data<api::graphql::client::Schema>),
 
         /// Single output schema for mixing
         SchemaMix(web::Data<api::graphql::mix::Schema>),
+
+        /// Dashboard schema
+        SchemaDashboard(web::Data<api::graphql::dashboard::Schema>),
+
+        /// Statistics schema
+        SchemaStatistics(web::Data<api::graphql::statistics::Schema>),
+    }
+
+    impl fmt::Debug for SchemaKind {
+        #[inline]
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "")
+        }
+    }
+
+    /// Endpoint serving [`api::`graphql`::statistics`] application
+    #[route("/api-statistics", method = "GET", method = "POST")]
+    async fn graphql_statistics(
+        req: HttpRequest,
+        payload: web::Payload,
+        schema: web::Data<api::graphql::statistics::Schema>,
+    ) -> Result<HttpResponse, Error> {
+        graphql(req, payload, SchemaKind::SchemaStatistics(schema)).await
+    }
+
+    /// Endpoint serving [`api::`graphql`::dashboard`] application
+    #[route("/api-dashboard", method = "GET", method = "POST")]
+    async fn graphql_dashboard(
+        req: HttpRequest,
+        payload: web::Payload,
+        schema: web::Data<api::graphql::dashboard::Schema>,
+    ) -> Result<HttpResponse, Error> {
+        graphql(req, payload, SchemaKind::SchemaDashboard(schema)).await
     }
 
     /// Endpoint serving [`api::`graphql`::mix`] for single output
@@ -199,9 +260,9 @@ pub mod client {
     async fn graphql_mix(
         req: HttpRequest,
         payload: web::Payload,
-        schema_mix: web::Data<api::graphql::mix::Schema>,
+        schema: web::Data<api::graphql::mix::Schema>,
     ) -> Result<HttpResponse, Error> {
-        graphql(req, payload, SchemaKind::SchemaMix(schema_mix)).await
+        graphql(req, payload, SchemaKind::SchemaMix(schema)).await
     }
 
     /// Endpoint serving [`api::`graphql`::client`] for main application
@@ -233,6 +294,14 @@ pub mod client {
                     subscriptions_handler(req, payload, s.into_inner(), cfg)
                         .await
                 }
+                SchemaKind::SchemaDashboard(s) => {
+                    subscriptions_handler(req, payload, s.into_inner(), cfg)
+                        .await
+                }
+                SchemaKind::SchemaStatistics(s) => {
+                    subscriptions_handler(req, payload, s.into_inner(), cfg)
+                        .await
+                }
             }
         } else {
             match schema_kind {
@@ -240,6 +309,12 @@ pub mod client {
                     graphql_handler(&s, &ctx, req, payload).await
                 }
                 SchemaKind::SchemaMix(s) => {
+                    graphql_handler(&s, &ctx, req, payload).await
+                }
+                SchemaKind::SchemaDashboard(s) => {
+                    graphql_handler(&s, &ctx, req, payload).await
+                }
+                SchemaKind::SchemaStatistics(s) => {
                     graphql_handler(&s, &ctx, req, payload).await
                 }
             }
@@ -261,6 +336,24 @@ pub mod client {
     /// [1]: https://github.com/graphql/graphql-playground
     #[get("/api-mix/playground")]
     async fn playground_mix() -> HttpResponse {
+        playground().await
+    }
+
+    /// Endpoint serving [GraphQL Playground][1] for exploring
+    /// [`api::graphql::dashboard`].
+    ///
+    /// [1]: https://github.com/graphql/graphql-playground
+    #[get("/api-dashboard/playground")]
+    async fn playground_dashboard() -> HttpResponse {
+        playground().await
+    }
+
+    /// Endpoint serving [GraphQL Playground][1] for exploring
+    /// [`api::graphql::statistics`].
+    ///
+    /// [1]: https://github.com/graphql/graphql-playground
+    #[get("/api-statistics/playground")]
+    async fn playground_statistics() -> HttpResponse {
         playground().await
     }
 
@@ -286,6 +379,10 @@ pub mod client {
     fn authorize(req: ServiceRequest) -> Result<ServiceRequest, Error> {
         let route = req.uri().path();
         log::debug!("authorize URI PATH: {}", route);
+
+        if route.starts_with(STATISTICS_ROUTE_API) {
+            return Ok(req);
+        }
 
         let is_mix_auth =
             route.starts_with(MIX_ROUTE) || route.starts_with(MIX_ROUTE_API);

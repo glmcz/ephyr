@@ -16,10 +16,11 @@ argon2 = { version = "0.8", package = "rust-argon2", default-features = false }
 askama = { version = "0.10", default-features = false }
 backoff = { version = "0.3", features = ["tokio"] }
 byteorder = "1.4"
-ephyr-log = { version = "0.1", path = "../../common/log" }
 chrono = { version = "0.4", features = ["serde"] }
+ephyr-log = { version = "0.1", path = "../../common/log" }
 futures = "0.3"
 futures-signals = "0.3"
+graphql_client = "0.10.0"
 hex = "0.4"
 humantime = "2.1"
 juniper = "0.15"
