@@ -15,11 +15,11 @@
     client.statistics.data.clientTitle;
 
   function getStatusCount(items, status) {
-    const output = items.find((x) => x.status === status);
-    return output ? output.count : 0;
+    const filteredItems = items.find((x) => x.status === status);
+    return filteredItems ? filteredItems.count : 0;
   }
 
-  async function removeRestream() {
+  async function removeClient() {
     try {
       await removeClientMutation({ variables: { client_id: client.id } });
     } catch (e) {
@@ -38,7 +38,7 @@
         type="button"
         class="uk-close"
         uk-close
-        on:click={() => confirm(removeRestream)}
+        on:click={() => confirm(removeClient)}
       />
       <span slot="title">Removing <code>{client.id}</code> host</span>
       <span slot="description"
