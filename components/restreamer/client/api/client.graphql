@@ -9,6 +9,17 @@ subscription Info {
     }
 }
 
+subscription ServerInfo {
+    serverInfo {
+        cpuUsage
+        ramTotal
+        ramFree
+        txDelta
+        rxDelta
+        errorMsg
+    }
+}
+
 subscription State {
     allRestreams {
         id

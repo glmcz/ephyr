@@ -24,7 +24,7 @@ use crate::{
 };
 
 use super::Context;
-use crate::state::{EndpointId, VolumeLevel};
+use crate::state::{EndpointId, ServerInfo, VolumeLevel};
 use url::Url;
 
 /// Schema of `Restreamer` app.
@@ -832,6 +832,19 @@ impl QueriesRoot {
         }
     }
 
+    /// Returns the current `ServerInfo`
+    fn server_info(context: &Context) -> ServerInfo {
+        let info = context.state().server_info.get_cloned();
+        ServerInfo {
+            cpu_usage: info.cpu_usage,
+            ram_total: info.ram_total,
+            ram_free: info.ram_free,
+            tx_delta: info.tx_delta,
+            rx_delta: info.rx_delta,
+            error_msg: info.error_msg,
+        }
+    }
+
     /// Returns all the `Restream`s happening on this server.
     fn all_restreams(context: &Context) -> Vec<Restream> {
         context.state().restreams.get_cloned()
@@ -920,6 +933,17 @@ impl SubscriptionsRoot {
                 delete_confirmation: h.delete_confirmation,
                 enable_confirmation: h.enable_confirmation,
             })
+            .to_stream()
+            .boxed()
+    }
+
+    /// Subscribes to updates of `ServerInfo` parameters of this server.
+    async fn server_info(context: &Context) -> BoxStream<'static, ServerInfo> {
+        context
+            .state()
+            .server_info
+            .signal_cloned()
+            .dedupe_cloned()
             .to_stream()
             .boxed()
     }

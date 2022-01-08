@@ -96,12 +96,68 @@ impl Default for Settings {
     }
 }
 
+/// Server's info
+#[derive(
+    Clone, Debug, Deserialize, Serialize, GraphQLObject, PartialEq, Default,
+)]
+pub struct ServerInfo {
+    /// Total CPU usage, %
+    pub cpu_usage: Option<f64>,
+
+    /// Total RAM installed on current machine
+    pub ram_total: Option<f64>,
+
+    /// Free (available) RAM
+    pub ram_free: Option<f64>,
+
+    /// Network traffic, transferred last second
+    pub tx_delta: Option<f64>,
+
+    /// Network traffic, received last second
+    pub rx_delta: Option<f64>,
+
+    /// Error message
+    pub error_msg: Option<String>,
+}
+
+impl ServerInfo {
+    /// Updates cpu usage
+    pub fn update_cpu(&mut self, cpu: Option<f64>) {
+        self.cpu_usage = cpu;
+    }
+
+    /// Sets error message
+    pub fn set_error(&mut self, msg: Option<String>) {
+        self.error_msg = msg;
+    }
+
+    /// Updates ram usage
+    pub fn update_ram(
+        &mut self,
+        ram_total: Option<f64>,
+        ram_free: Option<f64>,
+    ) {
+        self.ram_total = ram_total;
+        self.ram_free = ram_free;
+    }
+
+    /// Updates traffic usage
+    pub fn update_traffic_usage(
+        &mut self,
+        tx_delta: Option<f64>,
+        rx_delta: Option<f64>,
+    ) {
+        self.tx_delta = tx_delta;
+        self.rx_delta = rx_delta;
+    }
+}
+
 /// Reactive application's state.
 ///
 /// Any changes to it automatically propagate to the appropriate subscribers.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct State {
-    /// Global [`Settings`] of server
+    /// Global [`Settings`] of the server
     pub settings: Mutable<Settings>,
 
     /// All [`Restream`]s performed by this application.
@@ -109,6 +165,9 @@ pub struct State {
 
     /// All [`Client`]s for monitoring
     pub clients: Mutable<Vec<Client>>,
+
+    /// Global [`ServerInfo`] of the server
+    pub server_info: Mutable<ServerInfo>,
 }
 
 impl State {
@@ -761,7 +820,12 @@ impl State {
 
         let inputs_stat = self.get_inputs_statistics();
         let outputs_stat = self.get_outputs_statistics();
-        ClientStatistics::new(title, inputs_stat, outputs_stat)
+        ClientStatistics::new(
+            title,
+            inputs_stat,
+            outputs_stat,
+            self.server_info.lock_mut().clone(),
+        )
     }
 
     fn update_stat(stat: &mut HashMap<Status, i32>, status: Status) {
@@ -812,9 +876,7 @@ impl State {
 
 /// Client represents server with running `ephyr` app and can return some
 /// statistics about status of [`Input`]s, [`Output`]s .
-#[derive(
-    Clone, Debug, Eq, GraphQLObject, PartialEq, Serialize, Deserialize,
-)]
+#[derive(Clone, Debug, GraphQLObject, PartialEq, Serialize, Deserialize)]
 pub struct Client {
     /// Unique id of client. Url of the host.
     pub id: ClientId,
@@ -2513,7 +2575,7 @@ pub struct StatusStatistics {
 
 /// Information about status of all [`Input`]s and [`Output`]s and
 /// server health info (CPU usage, memory usage, etc.)
-#[derive(Clone, Debug, Eq, GraphQLObject, PartialEq)]
+#[derive(Clone, Debug, GraphQLObject, PartialEq)]
 pub struct ClientStatistics {
     /// Client title
     pub client_title: String,
@@ -2526,6 +2588,9 @@ pub struct ClientStatistics {
 
     /// Count of outputs grouped by status
     pub outputs: Vec<StatusStatistics>,
+
+    /// Info about server info (CPU, Memory, Network)
+    pub server_info: ServerInfo,
 }
 
 impl ClientStatistics {
@@ -2536,18 +2601,20 @@ impl ClientStatistics {
         client_title: String,
         inputs: Vec<StatusStatistics>,
         outputs: Vec<StatusStatistics>,
+        server_info: ServerInfo,
     ) -> Self {
         Self {
             client_title,
             timestamp: Utc::now(),
             inputs,
             outputs,
+            server_info,
         }
     }
 }
 
 /// Current state of [`ClientStatistics`] request
-#[derive(Clone, Debug, Eq, GraphQLObject, PartialEq)]
+#[derive(Clone, Debug, GraphQLObject, PartialEq)]
 pub struct ClientStatisticsResponse {
     /// Statistics data
     pub data: Option<ClientStatistics>,

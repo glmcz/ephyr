@@ -22,8 +22,10 @@ use tokio::time;
 
 use crate::client_stat::statistics_query::{
     StatisticsQueryStatisticsInputs, StatisticsQueryStatisticsOutputs,
+    StatisticsQueryStatisticsServerInfo,
 };
 
+use crate::state::ServerInfo;
 use chrono::{DateTime, Utc};
 use graphql_client::{GraphQLQuery, Response};
 use reqwest;
@@ -78,6 +80,19 @@ type DateTimeUtc = DateTime<Utc>;
 )]
 #[derive(Debug)]
 pub struct StatisticsQuery;
+
+impl From<StatisticsQueryStatisticsServerInfo> for ServerInfo {
+    fn from(item: StatisticsQueryStatisticsServerInfo) -> Self {
+        ServerInfo {
+            cpu_usage: item.cpu_usage,
+            ram_total: item.ram_total,
+            ram_free: item.ram_free,
+            rx_delta: item.rx_delta,
+            tx_delta: item.tx_delta,
+            error_msg: item.error_msg,
+        }
+    }
+}
 
 #[allow(clippy::cast_possible_truncation)]
 impl From<StatisticsQueryStatisticsInputs> for StatusStatistics {
@@ -253,6 +268,7 @@ impl ClientJob {
                         .into_iter()
                         .map(Into::into)
                         .collect(),
+                    data.statistics.server_info.into(),
                 )),
                 errors: Some(response_errors),
             }),
