@@ -1,19 +1,25 @@
 <script lang="js">
+  import { isNumber } from '../../utils/util';
+
   export let serverInfo;
   export let rowMode = false;
 
   const formatMem = (value) => {
-    return value
+    return isNumber(value)
       ? value.toLocaleString('en-US', { maximumFractionDigits: 0 })
       : '';
   };
 
   const formatNet = (value) => {
-    return value ? value.toFixed(1) : '';
+    return isNumber(value) ? value.toFixed(1) : '';
   };
 
   const formatCpuUsage = (value) => {
-    return value ? value.toFixed() : '';
+    return isNumber(value) ? value.toFixed() : '';
+  };
+
+  const formatErrorMsg = (value) => {
+    return value ? value.substring(0, 100) : '';
   };
 </script>
 
@@ -31,7 +37,7 @@
       </div>
       <div class="server-info-row">
         <span class="title">MEM</span> -
-        <span class="value uk-text-muted" title="Total memory / Used memory"
+        <span class="value uk-text-muted" title="Total memory / Free memory"
           >{formatMem(serverInfo.ramTotal)} Mb / {formatMem(serverInfo.ramFree)}
           Mb</span
         >
@@ -45,6 +51,14 @@
             serverInfo.rxDelta
           )} Mb/s</span
         >
+        {#if serverInfo.errorMsg}
+          <span
+            class="error-icon value uk-text-danger"
+            title={formatErrorMsg(serverInfo.errorMsg)}
+          >
+            <i class="fas fa-info-circle" />
+          </span>
+        {/if}
       </div>
     </div>
   {/if}
@@ -58,4 +72,6 @@
     margin-right: 10px
   .value
     cursor: pointer
+  .error-icon
+    margin-left: 4px;
 </style>
