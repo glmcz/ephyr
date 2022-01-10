@@ -4,6 +4,32 @@ Ephyr re-streamer changelog
 All user visible changes to this project will be documented in this file. This project uses [Semantic Versioning 2.0.0].
 
 
+## [0.5.0] · Unreleased
+[0.5.0]: /../../tree/restreamer-v0.5.0
+
+[Diff](/../../compare/restreamer-v0.4.0...restreamer-v0.5.0)
+
+### Added
+
+- Deploy:
+  - Add support deploy from custom docker registry ([#153]);
+- Web UI:
+  - Update link on logo ([#156]);
+  - Add server statistics for CPU, Mem and Net ([#140]);
+  - Add filters and export/import for Dashboard ([#152], [#157]);
+  - Show circles next to input numbers ([#154], [#157]);
+  - Show in title indicator if connection to server lost ([#157]);
+  
+[#154]: /../../issues/154
+
+[#140]: /../../pull/140
+[#152]: /../../pull/152
+[#153]: /../../pull/153
+[#156]: /../../pull/156
+[#157]: /../../pull/157
+
+
+
 ## [0.4.0] · 2021-11-27
 [0.4.0]: /../../tree/restreamer-v0.4.0
 
