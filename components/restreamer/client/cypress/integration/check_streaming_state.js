@@ -8,6 +8,7 @@ describe('CHECK STREAMING STATE', () => {
 
   it('Click Start All', () => {
     cy.allOutputStart();
+    cy.wait(5000);
   });
 
   const greenColor = 'rgb(50, 210, 150)';
