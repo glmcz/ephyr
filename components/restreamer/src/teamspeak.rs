@@ -246,6 +246,7 @@ impl AsyncRead for Input {
             &self.frame[cursor..(cursor + size)],
             &mut buf[..size_in_bytes],
         );
+
         self.cursor += size;
 
         Poll::Ready(Ok(size_in_bytes))
@@ -389,7 +390,11 @@ impl AudioCapture {
         cfg: Config,
         audio: Arc<Mutex<AudioHandler>>,
     ) -> Result<(), AudioCaptureError> {
-        log::debug!("Connecting to TeamSpeak server...");
+        log::debug!(
+            "Connecting to TeamSpeak server: {}/{:?}",
+            cfg.get_address(),
+            cfg.get_channel()
+        );
         let conn = cfg
             .hardware_id(Self::new_hwid())
             .connect()
