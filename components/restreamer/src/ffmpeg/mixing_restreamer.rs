@@ -6,6 +6,7 @@
 
 use std::{
     borrow::Cow,
+    collections::HashMap,
     fmt::Write as _,
     panic::AssertUnwindSafe,
     path::{Path, PathBuf},
@@ -28,6 +29,7 @@ use crate::{
 };
 use std::result::Result::Err;
 use tokio::fs::File;
+use tsclientlib::Identity;
 
 /// Kind of a [FFmpeg] re-streaming process that mixes a live stream from one
 /// URL endpoint with some additional live streams and re-streams the result to
@@ -439,19 +441,33 @@ impl Mixin {
 
                     let channel = state.src.path().trim_start_matches('/');
 
-                    let name = state
-                        .src
-                        .query_pairs()
-                        .find_map(|(k, v)| {
-                            (k == "name").then(|| v.into_owned())
-                        })
+                    let query: HashMap<String, String> =
+                        state.src.query_pairs().into_owned().collect();
+                    let name = query
+                        .get("name")
+                        .cloned()
                         .or_else(|| label.map(|l| format!("🤖 {}", l)))
                         .unwrap_or_else(|| format!("🤖 {}", state.id));
+                    let identity = query.get("identity").map_or_else(
+                        Identity::create,
+                        |v| {
+                            Identity::new_from_str(v).unwrap_or_else(|e| {
+                                log::error!(
+                                    "Failed to create identity `{}`\
+                                    \n\t with error: {}",
+                                    &v,
+                                    &e
+                                );
+                                Identity::create()
+                            })
+                        },
+                    );
 
                     Some(Arc::new(Mutex::new(teamspeak::Input::new(
                         teamspeak::Connection::build(host.into_owned())
                             .channel(channel.to_owned())
-                            .name(name),
+                            .name(name)
+                            .identity(identity),
                     ))))
                 })
             })
