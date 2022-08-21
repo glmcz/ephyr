@@ -4,7 +4,14 @@
 //! [FFmpeg]: https://ffmpeg.org
 
 use derive_more::From;
-use tokio::{io, process::Command};
+use ephyr_log::log;
+use libc::pid_t;
+use nix::{
+    sys::{signal, signal::Signal},
+    unistd::Pid,
+};
+use std::{convert::TryInto, os::unix::process::ExitStatusExt, time::Duration};
+use tokio::{io, process::Command, sync::watch};
 use url::Url;
 use uuid::Uuid;
 
@@ -12,11 +19,11 @@ use crate::{
     dvr,
     ffmpeg::{
         copy_restreamer::CopyRestreamer, mixing_restreamer::MixingRestreamer,
+        restreamer::RestreamerStatus,
         transcoding_restreamer::TranscodingRestreamer,
     },
     state::{self, State, Status},
 };
-use std::result::Result::Err;
 
 /// Data of a concrete kind of a running [FFmpeg] process performing a
 /// re-streaming, that allows to spawn and re-spawn it at any time.
@@ -200,45 +207,99 @@ impl RestreamerKind {
 
     /// Properly runs the given [FFmpeg] [`Command`] awaiting its completion.
     ///
+    /// Returns [`Ok`] if the [`kill_rx`] was sent and the ffmpeg process
+    /// was stopped properly or if the entire input file was played to the end.
+    ///
+    /// In case of [`Self::Mixin`] before starting [`Command`]
+    /// the FIFO files are created. For each pair of [`Mixin`] and FIFO the
+    /// new task are created and transfer data from [`Mixin.stdin`] to FIFO.
+    ///
     /// # Errors
     ///
-    /// This method doesn't return [`Ok`] as the running [FFmpeg] [`Command`] is
-    /// aborted by dropping and is intended to never stop. If it returns, than
-    /// an [`io::Error`] occurs and the [FFmpeg] [`Command`] cannot run.
+    /// It can return an [`io::Error`] if something unexpected happened and the
+    /// [FFmpeg] process was stopped.
     ///
     /// [FFmpeg]: https://ffmpeg.org
     #[inline]
-    pub(crate) async fn run_ffmpeg(&self, cmd: Command) -> io::Result<()> {
+    pub(crate) async fn run_ffmpeg(
+        &self,
+        cmd: Command,
+        kill_rx: watch::Receiver<RestreamerStatus>,
+    ) -> io::Result<()> {
         if let Self::Mixing(m) = self {
-            m.run_ffmpeg(cmd).await
-        } else {
-            Self::run_ffmpeg_no_stdin(cmd).await
+            m.start_fed_mixins_fifo(&kill_rx);
         }
+
+        Self::run_ffmpeg_(cmd, kill_rx).await
     }
 
-    /// Properly runs the given [FFmpeg] [`Command`] without writing to its
-    /// STDIN and awaits its completion.
+    /// Properly runs the given [FFmpeg] [`Command`] awaiting its completion.
+    ///
+    /// Returns [`Ok`] if the [`kill_rx`] was sent and the ffmpeg process
+    /// was stopped properly or if the entire input file was played to the end.
     ///
     /// # Errors
     ///
-    /// This method doesn't return [`Ok`] as the running [FFmpeg] [`Command`] is
-    /// aborted by dropping and is intended to never stop. If it returns, than
-    /// an [`io::Error`] occurs and the [FFmpeg] [`Command`] cannot run.
+    /// It can return an [`io::Error`] if something unexpected happened and the
+    /// [FFmpeg] process was stopped.
     ///
     /// [FFmpeg]: https://ffmpeg.org
-    async fn run_ffmpeg_no_stdin(mut cmd: Command) -> io::Result<()> {
+    async fn run_ffmpeg_(
+        mut cmd: Command,
+        mut kill_rx: watch::Receiver<RestreamerStatus>,
+    ) -> io::Result<()> {
         let process = cmd.spawn()?;
 
-        let out = process.wait_with_output().await?;
+        // To avoid instant resolve on await for `kill_rx`
+        let _ = *kill_rx.borrow_and_update();
 
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!(
-                "FFmpeg re-streamer stopped with exit code: {}\n{}",
-                out.status,
-                String::from_utf8_lossy(&out.stderr),
-            ),
-        ))
+        let pid: pid_t = process
+            .id()
+            .expect("Failed to retrieve Process ID")
+            .try_into()
+            .expect("Failed to convert u32 to i32");
+
+        // Task that sends SIGTERM if async stop of ffmpeg was invoked
+        let kill_task = tokio::spawn(async move {
+            let _ = kill_rx.changed().await;
+            log::debug!("Signal for FFmpeg received");
+            // It is necessary to send the signal two times and wait after
+            // sending the first one to correctly close all ffmpeg processes
+            signal::kill(Pid::from_raw(pid), Signal::SIGTERM)
+                .expect("Failed to kill process");
+            tokio::time::sleep(Duration::from_millis(1)).await;
+            signal::kill(Pid::from_raw(pid), Signal::SIGTERM)
+                .expect("Failed to kill process");
+        });
+
+        let out = process.wait_with_output().await?;
+        kill_task.abort();
+
+        let status_code = out.status.code();
+        let signal_code = out.status.signal();
+        if out.status.success()
+            || status_code.and_then(|v| (v == 255).then_some(())).is_some()
+            || signal_code.and_then(|v| (v == 15).then_some(())).is_some()
+        {
+            log::debug!(
+                "FFmpeg re-streamer successfully stopped\n\
+                        \t exit code: {:?}\n\
+                        \t signal code: {:?}",
+                status_code,
+                signal_code
+            );
+            Ok(())
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!(
+                    "FFmpeg re-streamer unsuccessfully stopped \
+                    with exit code: {}\n{}",
+                    out.status,
+                    String::from_utf8_lossy(&out.stderr),
+                ),
+            ))
+        }
     }
 
     /// Renews [`Status`] of this [FFmpeg] re-streaming process in the `actual`

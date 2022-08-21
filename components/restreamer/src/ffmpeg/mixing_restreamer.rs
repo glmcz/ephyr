@@ -17,19 +17,22 @@ use std::{
 use ephyr_log::{log, Drain as _};
 use futures::{FutureExt as _, TryFutureExt as _};
 use interprocess::os::unix::fifo_file::create_fifo;
-use tokio::{io, process::Command, sync::Mutex};
+use tokio::{
+    fs::File,
+    io, pin,
+    process::Command,
+    sync::{watch, Mutex},
+};
+use tsclientlib::Identity;
 use url::Url;
 use uuid::Uuid;
 
 use crate::{
     display_panic, dvr,
-    ffmpeg::RestreamerKind,
+    ffmpeg::{restreamer::RestreamerStatus, RestreamerKind},
     state::{self, Delay, MixinId, MixinSrcUrl, State, Volume},
     teamspeak,
 };
-use std::result::Result::Err;
-use tokio::fs::File;
-use tsclientlib::Identity;
 
 /// Kind of a [FFmpeg] re-streaming process that mixes a live stream from one
 /// URL endpoint with some additional live streams and re-streams the result to
@@ -321,41 +324,10 @@ impl MixingRestreamer {
         Ok(())
     }
 
-    /// Runs the given [FFmpeg] [`Command`] by feeding to its STDIN the captured
-    /// [`Mixin`] (if required), and awaits its completion.
+    /// Copy data from [`Mixin.stdin`] to [FIFO].
     ///
-    /// # Errors
-    ///
-    /// This method doesn't return [`Ok`] as the running [FFmpeg] [`Command`] is
-    /// aborted by dropping and is intended to never stop. If it returns, than
-    /// an [`io::Error`] occurs and the [FFmpeg] [`Command`] cannot run.
-    ///
-    /// [FFmpeg]: https://ffmpeg.org
-    /// [TeamSpeak]: https://teamspeak.com
-    pub(crate) async fn run_ffmpeg(&self, mut cmd: Command) -> io::Result<()> {
-        // FIFO should be exists before start of FFmpeg process
-        self.create_mixins_fifo()?;
-        // FFmpeg should start reading FIFO before writing started
-        let process = cmd.spawn()?;
-        self.start_fed_mixins_fifo();
-        // Need to hold process somewhere
-        let out = process.wait_with_output().await?;
-
-        // Cleanup FIFO files only in case of error
-        // TODO: Move in proper place or remove completely
-        self.remove_mixins_fifo();
-
-        Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!(
-                "FFmpeg re-streamer stopped with exit code: {}\n{}",
-                out.status,
-                String::from_utf8_lossy(&out.stderr),
-            ),
-        ))
-    }
-
-    /// Creates [FIFO] files for [`Mixin`]s.
+    /// Each data copying is operated in separate thread.
+    /// [FIFO] should be fed before [FFmpeg].
     ///
     /// # Errors
     ///
@@ -363,51 +335,59 @@ impl MixingRestreamer {
     /// We need it because [FFmpeg] cannot start if no [FIFO] file.
     ///
     /// [FIFO]: https://www.unix.com/man-page/linux/7/fifo/
-    fn create_mixins_fifo(&self) -> io::Result<()> {
-        for m in &self.mixins {
-            if !m.get_fifo_path().exists() {
-                create_fifo(m.get_fifo_path(), 0o777)?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Remove [FIFO] files for [`Mixin`]s.
-    ///
-    /// We don't really care if file was really deleted so no error.
-    ///
-    /// [FIFO]: https://www.unix.com/man-page/linux/7/fifo/
-    fn remove_mixins_fifo(&self) {
-        for m in &self.mixins {
-            if m.get_fifo_path().exists() {
-                let _ = std::fs::remove_file(m.get_fifo_path())
-                    .map_err(|e| log::error!("Failed to remove FIFO: {}", e));
-            }
-        }
-    }
-
-    /// Copy data from [`Mixin.stdin`] to [FIFO].
-    /// Each data copying is operated in separate thread.
-    ///
-    /// [FIFO]: https://www.unix.com/man-page/linux/7/fifo/
-    fn start_fed_mixins_fifo(&self) {
-        async fn run_copy(
+    /// [FFmpeg]: https://ffmpeg.org
+    pub(crate) fn start_fed_mixins_fifo(
+        &self,
+        kill_rx: &watch::Receiver<RestreamerStatus>,
+    ) {
+        async fn run_copy_and_stop_on_signal(
             input: Arc<Mutex<teamspeak::Input>>,
             fifo_path: PathBuf,
+            mut kill_rx: watch::Receiver<RestreamerStatus>,
         ) -> io::Result<()> {
-            let mut src = input.lock().await;
-            log::debug!("Connecting to FIFO: {:?}", &fifo_path);
-            let mut file = File::create(&fifo_path).await?;
+            // To avoid instant resolve on await for `kill_rx`
+            let _ = *kill_rx.borrow_and_update();
 
-            let _ = io::copy(&mut *src, &mut file).await.map_err(|e| {
-                log::error!("Failed to write into FIFO: {}", e);
-            });
+            // Initialize copying future to fed it into select
+            let mut src = input.lock().await;
+            let mut file = File::create(&fifo_path).await?;
+            let copying = io::copy(&mut *src, &mut file);
+            pin!(copying);
+
+            // Run copying to FIFO and stops if receive signal from `kill_rx`
+            loop {
+                tokio::select! {
+                    r = &mut copying => {
+                        let _ = r.map_err(|e|
+                            log::error!("Failed to write into FIFO: {}", e)
+                        );
+                        break;
+                    }
+                   _ = kill_rx.changed() => {
+                        log::debug!("Signal for FIFO received");
+                        break;
+                    }
+                }
+            }
+            // Clean up FIFO file
+            let _ = std::fs::remove_file(fifo_path)
+                .map_err(|e| log::error!("Failed to remove FIFO: {}", e));
+
             Ok(())
         }
 
         for m in &self.mixins {
+            // FIFO should be created before open
+            if !m.get_fifo_path().exists() {
+                let _ = create_fifo(m.get_fifo_path(), 0o777)
+                    .map_err(|e| log::error!("Failed to create FIFO: {}", e));
+            }
             if let Some(i) = m.stdin.as_ref() {
-                drop(tokio::spawn(run_copy(Arc::clone(i), m.get_fifo_path())));
+                drop(tokio::spawn(run_copy_and_stop_on_signal(
+                    Arc::clone(i),
+                    m.get_fifo_path(),
+                    kill_rx.clone(),
+                )));
             }
         }
     }
