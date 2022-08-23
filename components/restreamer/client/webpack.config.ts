@@ -107,18 +107,21 @@ const config: webpack.Configuration = {
       title: 'Ephyr re-streamer',
       filename: 'index.html',
       template: 'static/index.html',
+      baseHref: '/',
       chunks: ['main'],
     }),
     new HtmlWebpackPlugin({
       title: 'Ephyr Mixin',
       filename: 'mix/index.html',
       template: 'static/index.html',
+      baseHref: '/mix',
       chunks: ['mix/main'],
     }),
     new HtmlWebpackPlugin({
       title: 'Ephyr Dashboard',
       filename: 'dashboard/index.html',
       template: 'static/index.html',
+      baseHref: '/dashboard',
       chunks: ['dashboard/main'],
     }),
     new webpack.EnvironmentPlugin({
