@@ -20,7 +20,7 @@
   import { showError } from '../utils/util';
   import { statusesList } from '../constants/statuses';
 
-  import { restreamModal, outputModal, exportModal } from '../stores';
+  import { outputModal, exportModal } from '../stores';
 
   import Confirm from './common/Confirm.svelte';
   import Input from './Input.svelte';
@@ -29,6 +29,8 @@
   import StatusFilter from './common/StatusFilter.svelte';
   import { getReStreamOutputsCount } from '../utils/restreamHelpers.util';
   import { toggleFilterStatus } from '../utils/statusFilters.util';
+  import { RestreamModel } from '../models/restream.model';
+  import RestreamModal from '../modals/RestreamModal.svelte';
 
   const removeRestreamMutation = mutation(RemoveRestream);
   const disableAllOutputsMutation = mutation(DisableAllOutputs);
@@ -71,38 +73,7 @@
     : [];
   $: hasActiveFilters = reStreamOutputsFilters.length;
 
-  function openEditRestreamModal() {
-    const with_hls = value.input.endpoints.some((e) => e.kind === 'HLS');
-
-    let pull_url = null;
-    let backup = null;
-
-    if (!!value.input.src && value.input.src.__typename === 'RemoteInputSrc') {
-      pull_url = value.input.src.url;
-    }
-
-    if (
-      !!value.input.src &&
-      value.input.src.__typename === 'FailoverInputSrc'
-    ) {
-      backup = true;
-      if (!!value.input.src.inputs[0].src) {
-        pull_url = value.input.src.inputs[0].src.url;
-      }
-      if (!!value.input.src.inputs[1].src) {
-        backup = value.input.src.inputs[1].src.url;
-      }
-    }
-
-    restreamModal.openEdit(
-      value.id,
-      value.key,
-      value.label,
-      pull_url,
-      backup,
-      with_hls
-    );
-  }
+  let openRestreamModal = false;
 
   async function removeRestream() {
     try {
@@ -238,10 +209,17 @@
     <a
       class="edit-input"
       href="/"
-      on:click|preventDefault={openEditRestreamModal}
+      on:click|preventDefault={() => (openRestreamModal = true)}
     >
       <i class="far fa-edit" title="Edit input" />
     </a>
+    {#if openRestreamModal}
+      <RestreamModal
+        public_host={$info.data.info.publicHost}
+        bind:visible={openRestreamModal}
+        restream={new RestreamModel(value)}
+      />
+    {/if}
     <Input
       {public_host}
       restream_id={value.id}
