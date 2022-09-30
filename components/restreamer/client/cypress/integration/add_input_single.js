@@ -1,7 +1,13 @@
 describe('ADD SINGLE INPUT', () => {
-  it('Goes to the homepage', () => {
+  before(() => {
     cy.visit('/');
+    cy.deleteAllInputs();
   });
+
+  after(() => {
+    cy.deleteAllInputs();
+  });
+
   it('Add-input', () => {
     cy.get("span:contains('Input')").click();
   });
@@ -15,7 +21,7 @@ describe('ADD SINGLE INPUT', () => {
   });
 
   it('Submits', () => {
-    cy.get('button').contains(/^Add$/).click();
+    cy.clickAddInputBtn();
   });
 
   it('Assert', () => {

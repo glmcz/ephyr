@@ -1,54 +1,16 @@
 <script lang="js">
-  import { mutation } from 'svelte-apollo';
-
-  import { SetEndpointLabel } from '../../api/client.graphql';
-
-  import Url from './common/Url.svelte';
-  import { showError } from '../utils/util';
-
-  const changeLabelMutation = mutation(SetEndpointLabel);
+  import Url from '../common/Url.svelte';
+  import InputEndpointLabel from './InputEndpointLabel.svelte';
 
   export let endpoint;
   export let input;
   export let input_url;
   export let restream_id;
-
-  let label_component;
-  let label_input;
-  let editing_label = false;
+  export let with_label;
+  export let show_controls;
 
   $: isPull = !!input.src && input.src.__typename === 'RemoteInputSrc';
   $: isFailover = !!input.src && input.src.__typename === 'FailoverInputSrc';
-
-  async function editLabel(startEdit) {
-    if (startEdit) {
-      editing_label = true;
-    } else {
-      const variables = {
-        restream_id: restream_id,
-        input_id: input.id,
-        endpoint_id: endpoint.id,
-        label: label_input.value,
-      };
-      try {
-        let result_val = await changeLabelMutation({ variables });
-        if (result_val.data.changeEndpointLabel) {
-          endpoint.label = label_input.value;
-          label_component.value = endpoint.label;
-          editing_label = false;
-        } else {
-          showError('Provided text has invalid characters or is too long.');
-        }
-      } catch (e) {
-        showError(e.message);
-      }
-    }
-  }
-
-  function init_input(label_input) {
-    label_input.value = endpoint.label;
-    label_input.focus();
-  }
 </script>
 
 <template>
@@ -107,29 +69,9 @@
     </div>
 
     <Url url={input_url} />
-    <div class="endpoint-label">
-      <span bind:this={label_component} class:hidden={editing_label}
-        >{endpoint.label ? endpoint.label : ''}</span
-      >
-      {#if editing_label}
-        <input
-          bind:this={label_input}
-          use:init_input
-          on:focusout|preventDefault={() => {
-            editLabel(false);
-          }}
-        />
-      {/if}
-      <a
-        class="edit-label"
-        href="/"
-        on:click|preventDefault={() => {
-          editLabel(true);
-        }}
-      >
-        <i class="far fa-edit" title="Edit label" />
-      </a>
-    </div>
+    {#if with_label}
+      <InputEndpointLabel {endpoint} {restream_id} {input} {show_controls} />
+    {/if}
   </div>
 </template>
 
@@ -144,27 +86,6 @@
     .fa-circle, .fa-dot-circle
       font-size: 13px
       cursor: help
-
-    .endpoint-label
-      margin-left 5px
-      color: #999
-
-      &:hover
-        .edit-label
-          opacity: 1
-
-      .hidden
-        display: none
-
-      .edit-label
-        opacity: 0
-        transition: opacity .3s ease
-        color: #666
-        outline: none
-        &:hover
-          opacity: 1
-          text-decoration: none
-          color: #444
 
     .endpoint-status-icon
       flex-shrink: 0

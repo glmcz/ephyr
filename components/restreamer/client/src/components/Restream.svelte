@@ -23,7 +23,7 @@
   import { outputModal, exportModal } from '../stores';
 
   import Confirm from './common/Confirm.svelte';
-  import Input from './Input.svelte';
+  import Input from './input/Input.svelte';
   import Output from './Output.svelte';
   import Toggle from './common/Toggle.svelte';
   import StatusFilter from './common/StatusFilter.svelte';
@@ -72,6 +72,8 @@
     ? globalOutputsFilters
     : [];
   $: hasActiveFilters = reStreamOutputsFilters.length;
+
+  $: showControls = false;
 
   let openRestreamModal = false;
 
@@ -128,6 +130,8 @@
     data-testid={value.label}
     class="uk-section uk-section-muted uk-section-xsmall"
     class:hidden
+    on:mouseenter={() => (showControls = true)}
+    on:mouseleave={() => (showControls = false)}
   >
     <div class="left-buttons-area" />
     <div class="right-buttons-area" />
@@ -207,6 +211,7 @@
     {/if}
 
     <a
+      data-testid="edit-input-modal:open"
       class="edit-input"
       href="/"
       on:click|preventDefault={() => (openRestreamModal = true)}
@@ -225,6 +230,8 @@
       restream_id={value.id}
       restream_key={value.key}
       value={value.input}
+      with_label={false}
+      show_controls={showControls}
     />
     {#if !!value.input.src && value.input.src.__typename === 'FailoverInputSrc'}
       {#each value.input.src.inputs as input}
@@ -233,11 +240,13 @@
           restream_id={value.id}
           restream_key={value.key}
           value={input}
+          with_label={true}
+          show_controls={showControls}
         />
       {/each}
     {/if}
 
-    <div class="uk-grid uk-grid-small" uk-grid>
+    <div class="uk-grid uk-grid-small">
       {#each value.outputs as output}
         <Output
           {deleteConfirmation}

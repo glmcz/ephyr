@@ -1,7 +1,13 @@
 describe('ADD PULL INPUT', () => {
-  it('Goes to the homepage', () => {
+  before(() => {
     cy.visit('/');
+    cy.deleteAllInputs();
   });
+
+  after(() => {
+    cy.deleteAllInputs();
+  });
+
   it('Add-input', () => {
     cy.get('.add-input').click();
   });
@@ -26,8 +32,7 @@ describe('ADD PULL INPUT', () => {
   });
 
   it('Submits', () => {
-    cy.get('button').contains(/^Add$/).click();
-    cy.get('button').contains(/^Add$/).should('not.exist');
+    cy.clickAddInputBtn();
   });
 
   it('Assert', () => {

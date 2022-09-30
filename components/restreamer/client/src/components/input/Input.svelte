@@ -1,12 +1,12 @@
 <script lang="js">
   import { mutation, subscribe } from 'svelte-apollo';
 
-  import { DisableInput, EnableInput, Info } from '../../api/client.graphql';
+  import { DisableInput, EnableInput, Info } from '../../../api/client.graphql';
 
-  import { showError } from '../utils/util';
+  import { showError } from '../../utils/util';
 
-  import Toggle from './common/Toggle.svelte';
-  import Confirm from './common/Confirm.svelte';
+  import Toggle from '../common/Toggle.svelte';
+  import Confirm from '../common/Confirm.svelte';
   import InputEndpoint from './InputEndpoint.svelte';
 
   const disableInputMutation = mutation(DisableInput);
@@ -18,6 +18,8 @@
   export let restream_id;
   export let restream_key;
   export let value;
+  export let with_label;
+  export let show_controls;
 
   $: isPull = !!value.src && value.src.__typename === 'RemoteInputSrc';
 
@@ -70,6 +72,8 @@
           input={value}
           input_url={getInputUrl(endpoint)}
           {restream_id}
+          {with_label}
+          {show_controls}
         />
       {/each}
     </div>

@@ -66,11 +66,17 @@ impl InputEndpoint {
         }
     }
 
-    /// Applies the given [`spec::v1::InputEndpoint`] to this [`InputEndpoint`].
+    /// Applies the given [`spec::v1::InputEndpoint`] to
+    /// this [`InputEndpoint`].
+    ///
+    /// If `label` is not `None` than we already
+    /// set the value and the update is not required.
     #[inline]
     pub fn apply(&mut self, new: spec::v1::InputEndpoint) {
         self.kind = new.kind;
-        self.label = new.label;
+        if new.label.is_some() {
+            self.label = new.label;
+        };
     }
 
     /// Exports this [`InputEndpoint`] as a [`spec::v1::InputEndpoint`].
