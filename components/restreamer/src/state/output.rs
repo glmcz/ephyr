@@ -246,7 +246,7 @@ impl<'de> Deserialize<'de> for OutputDstUrl {
         D: Deserializer<'de>,
     {
         Self::new(Url::deserialize(deserializer)?).map_err(|url| {
-            D::Error::custom(format!("Not a valid Output.src URL: {}", url))
+            D::Error::custom(format!("Not a valid Output.src URL: {url}"))
         })
     }
 }

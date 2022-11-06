@@ -690,7 +690,7 @@ impl MutationsRoot {
         if path.starts_with('/') || path.contains("../") {
             return Err(graphql::Error::new("INVALID_DVR_FILE_PATH")
                 .status(StatusCode::BAD_REQUEST)
-                .message(&format!("Invalid DVR file path: {}", path)));
+                .message(&format!("Invalid DVR file path: {path}")));
         }
 
         Ok(dvr::Storage::global().remove_file(path).await)
@@ -752,7 +752,7 @@ impl MutationsRoot {
             argon2::hash_encoded(
                 v.as_bytes(),
                 &rand::thread_rng().gen::<[u8; 32]>(),
-                &*HASH_CFG,
+                &HASH_CFG,
             )
             .unwrap()
         });
@@ -897,7 +897,7 @@ impl QueriesRoot {
                 }
                 .into();
                 serde_json::to_string(&spec).map_err(|e| {
-                    anyhow!("Failed to JSON-serialize spec: {}", e).into()
+                    anyhow!("Failed to JSON-serialize spec: {e}").into()
                 })
             })
             .transpose()
