@@ -6,6 +6,7 @@ use tokio::time;
 use crate::{cli::Failure, display_panic, state::ServerInfo, State};
 use ephyr_log::log;
 use futures::FutureExt;
+use num_cpus;
 use std::panic::AssertUnwindSafe;
 
 /// Runs statistics monitoring
@@ -19,6 +20,7 @@ use std::panic::AssertUnwindSafe;
 /// run in `future::try_join3`
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_possible_wrap)]
 pub async fn run(state: State) -> Result<(), Failure> {
     // we use tx_last and rx_last to compute the delta
     // (send/receive bytes last second)
@@ -49,6 +51,11 @@ pub async fn run(state: State) -> Result<(), Failure> {
                         info.update_cpu(Some(
                             f64::from(1.0 - cpu.idle) * 100.0,
                         ));
+
+                        let cpus_usize = num_cpus::get();
+                        let cpus: i32 = cpus_usize as i32;
+
+                        info.update_cores(Some(cpus));
                     }
                     Err(x) => {
                         info.set_error(Some(x.to_string()));
