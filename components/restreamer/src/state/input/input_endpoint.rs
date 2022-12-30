@@ -8,7 +8,10 @@ use uuid::Uuid;
 
 use crate::{
     spec, srs,
-    state::{InputKey, Label, RestreamKey, Status},
+    state::{
+        client_statistics::StreamStatistics, InputKey, Label, RestreamKey,
+        Status,
+    },
 };
 
 /// Endpoint of an `Input` serving a live stream for `Output`s and clients.
@@ -48,6 +51,9 @@ pub struct InputEndpoint {
     #[graphql(skip)]
     #[serde(skip)]
     pub srs_player_ids: HashSet<srs::ClientId>,
+
+    /// Corresponding stream info
+    pub stream_stat: Option<StreamStatistics>,
 }
 
 impl InputEndpoint {
@@ -63,6 +69,7 @@ impl InputEndpoint {
             label: spec.label,
             srs_publisher_id: None,
             srs_player_ids: HashSet::new(),
+            stream_stat: None,
         }
     }
 
@@ -135,18 +142,29 @@ impl InputEndpointKind {
     /// Returns RTMP URL on a local [SRS] server of this [`InputEndpointKind`]
     /// for the given `restream` and `input`.
     ///
-    /// # Panics
-    /// No panics, because [`RestreamKey`] and [`InputKey`] are validated.
-    ///
     /// [SRS]: https://github.com/ossrs/srs
     #[must_use]
     pub fn rtmp_url(self, restream: &RestreamKey, input: &InputKey) -> Url {
+        Self::get_rtmp_url(restream, input, self)
+    }
+
+    /// Create RTMP URL for specific [`RestreamKey`] and [`InputKey`]
+    /// and [`InputEndpointKind`]
+    ///
+    /// # Panics
+    /// No panics, because [`RestreamKey`] and [`InputKey`] are validated.
+    #[must_use]
+    pub fn get_rtmp_url(
+        restream: &RestreamKey,
+        input: &InputKey,
+        kind: InputEndpointKind,
+    ) -> Url {
         Url::parse(&format!(
             "rtmp://127.0.0.1:1935/{}{}/{}",
             restream,
-            match self {
-                Self::Rtmp => "",
-                Self::Hls => "?vhost=hls",
+            match kind {
+                InputEndpointKind::Rtmp => "",
+                InputEndpointKind::Hls => "?vhost=hls",
             },
             input,
         ))

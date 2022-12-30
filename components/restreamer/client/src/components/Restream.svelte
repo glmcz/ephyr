@@ -17,8 +17,8 @@
     Info,
   } from '../../api/client.graphql';
 
-  import { showError } from '../utils/util';
-  import { statusesList } from '../constants/statuses';
+  import { isFailoverInput, showError } from '../utils/util';
+  import { statusesList } from '../utils/constants';
 
   import { outputModal, exportModal } from '../stores';
 
@@ -27,10 +27,16 @@
   import Output from './Output.svelte';
   import Toggle from './common/Toggle.svelte';
   import StatusFilter from './common/StatusFilter.svelte';
-  import { getReStreamOutputsCount } from '../utils/restreamHelpers.util';
-  import { toggleFilterStatus } from '../utils/statusFilters.util';
+  import {
+    getReStreamOutputsCount,
+    toggleFilterStatus,
+  } from '../utils/filters.util';
   import { RestreamModel } from '../models/restream.model';
   import RestreamModal from '../modals/RestreamModal.svelte';
+  import {
+    getEndpointsWithDiffStreams,
+    getEndpointsWithStreamsErrors,
+  } from '../utils/input.util';
 
   const removeRestreamMutation = mutation(RemoveRestream);
   const disableAllOutputsMutation = mutation(DisableAllOutputs);
@@ -74,6 +80,10 @@
   $: hasActiveFilters = reStreamOutputsFilters.length;
 
   $: showControls = false;
+
+  $: streamsErrorsTooltip = getStreamErrorTooltip(value.input);
+
+  $: streamsDiffTooltip = getStreamsDifferenceTooltip(value.input);
 
   let openRestreamModal = false;
 
@@ -123,6 +133,24 @@
       );
     }
   }
+
+  const getStreamErrorTooltip = (input) => {
+    const inputKeys = getEndpointsWithStreamsErrors(input);
+    return inputKeys?.length
+      ? `Can't get stream info from <strong>${inputKeys}</strong>`
+      : '';
+  };
+
+  const getStreamsDifferenceTooltip = (input) => {
+    const result = getEndpointsWithDiffStreams(input);
+    return result?.endpointsWithDiffStreams?.length
+      ? `<strong>${result.endpointsWithDiffStreams.join(', ')}</strong> ${
+          result.endpointsWithDiffStreams.length === 1 ? 'stream' : 'streams'
+        } params ${
+          result.endpointsWithDiffStreams.length === 1 ? 'differs' : 'differ'
+        } from <strong>${result.firstEndpointKey}</strong> stream params`
+      : '';
+  };
 </script>
 
 <template>
@@ -171,7 +199,20 @@
     </a>
 
     {#if !!value.label}
-      <span class="section-label">{value.label}</span>
+      <span class="section-label">
+        {value.label}
+        {#key streamsErrorsTooltip || streamsDiffTooltip}
+          <span>
+            <i
+              class="fa fa-info-circle info-icon"
+              class:has-error={!!streamsErrorsTooltip}
+              class:has-warning={!!streamsDiffTooltip}
+              class:hidden={!streamsErrorsTooltip && !streamsDiffTooltip}
+              uk-tooltip={streamsErrorsTooltip || streamsDiffTooltip}
+            />
+          </span>
+        {/key}
+      </span>
     {/if}
 
     {#if value.outputs && value.outputs.length > 0}
@@ -233,7 +274,7 @@
       with_label={false}
       show_controls={showControls}
     />
-    {#if !!value.input.src && value.input.src.__typename === 'FailoverInputSrc'}
+    {#if isFailoverInput(value.input)}
       {#each value.input.src.inputs as input}
         <Input
           {public_host}
@@ -292,6 +333,7 @@
       margin-top: -2px
       opacity: 0
       transition: opacity .3s ease
+
       &:hover
         opacity: 1
 
@@ -303,18 +345,24 @@
       position: absolute
       opacity: 0
       transition: opacity .3s ease
+
       &:hover
         opacity: 1
+
     .edit-input, .export-import
       color: #666
       outline: none
+
       &:hover
         text-decoration: none
         color: #444
+
     .edit-input
       left: -25px
+
     .export-import
       right: -25px
+
     .uk-close
       right: -21px
       top: -15px
@@ -322,10 +370,12 @@
     .left-buttons-area, .right-buttons-area
       position: absolute
       width: 34px
+
     .left-buttons-area
       right: 100%
       top: 0
       height: 100%
+
     .right-buttons-area
       left: 100%
       top: -20px
@@ -334,5 +384,15 @@
     .uk-grid
       margin-top: 10px
       margin-left: -10px
+
+    .info-icon
+      font-size: 16px
+
+    .has-error
+      color: var(--danger-color)
+
+    .has-warning
+      color: var(--warning-color)
+
 
 </style>

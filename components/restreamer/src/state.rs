@@ -41,7 +41,10 @@ use serde::{Deserialize, Serialize};
 use smart_default::SmartDefault;
 use tokio::{fs, io::AsyncReadExt as _};
 
-use crate::{display_panic, spec, Spec};
+use crate::{
+    display_panic, spec, state::client_statistics::StreamStatistics,
+    stream_probe::StreamInfo, Spec,
+};
 use std::collections::HashMap;
 
 /// Reactive application's state.
@@ -692,6 +695,43 @@ impl State {
         mixin.sidechain = sidechain;
         Some(true)
     }
+
+    /// Clean up stream statistics info
+    pub fn cleanup_stream_info(&self) {
+        let mut restreams = self.restreams.lock_mut();
+        restreams.iter_mut().for_each(|r| {
+            if let Some(InputSrc::Failover(s)) = &mut r.input.src {
+                for mut e in
+                    s.inputs.iter_mut().flat_map(|i| i.endpoints.iter_mut())
+                {
+                    if e.status == Status::Offline {
+                        e.stream_stat = None;
+                    }
+                }
+            }
+        });
+    }
+
+    /// Updates info about stream for [`InputEndpoint`]
+    ///
+    /// # Errors
+    ///
+    /// If endpoint with specified `id` is not found.
+    pub fn set_stream_info(
+        &self,
+        id: EndpointId,
+        result: anyhow::Result<StreamInfo>,
+    ) -> anyhow::Result<()> {
+        let mut restreams = self.restreams.lock_mut();
+        let endpoint = restreams
+            .iter_mut()
+            .find_map(|r| r.input.find_endpoint(id))
+            .ok_or_else(|| anyhow!("Can't find endpoint with id: {:?}", id))?;
+
+        endpoint.stream_stat = Some(StreamStatistics::new(result));
+        Ok(())
+    }
+
     /// Gather statistics about [`Input`]s statuses
     #[must_use]
     pub fn get_inputs_statistics(&self) -> Vec<StatusStatistics> {

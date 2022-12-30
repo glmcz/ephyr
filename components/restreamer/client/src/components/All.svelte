@@ -10,9 +10,16 @@
   } from '../../api/client.graphql';
   import OutputModal from '../modals/OutputModal.svelte';
   import PasswordModal from '../modals/PasswordModal.svelte';
-  import { getAggregatedStreamsData } from '../utils/allHelpers.util';
-  import { statusesList } from '../constants/statuses';
-  import { toggleFilterStatus } from '../utils/statusFilters.util';
+  import {
+    getAggregatedStreamsData,
+    toggleFilterStatus,
+  } from '../utils/filters.util';
+  import {
+    statusesList,
+    STREAM_ERROR,
+    STREAM_WARNING,
+    streamStatusList,
+  } from '../utils/constants';
   import { onDestroy } from 'svelte';
   import Restream from './Restream.svelte';
   import cloneDeep from 'lodash/cloneDeep';
@@ -40,7 +47,6 @@
 
   $: globalInputsFilters = [];
   $: globalOutputsFilters = [];
-  $: hasActiveFilters = globalInputsFilters.length;
 
   $: {
     allReStreams = getFilteredRestreams(
@@ -50,6 +56,34 @@
       searchInOutputs
     );
   }
+
+  const isReStreamVisible = (restream) => {
+    const hasInputFilter = globalInputsFilters.includes(
+      restream.input.endpoints[0].status
+    );
+
+    const hasStreamsWarnings =
+      globalInputsFilters.includes(STREAM_WARNING) &&
+      aggregatedStreamsData.endpointsStreamsStatus[STREAM_WARNING].includes(
+        restream.input.id
+      );
+
+    const hasStreamsErrors =
+      globalInputsFilters.includes(STREAM_ERROR) &&
+      aggregatedStreamsData.endpointsStreamsStatus[STREAM_ERROR].includes(
+        restream.input.id
+      );
+
+    return hasInputFilter || hasStreamsWarnings || hasStreamsErrors;
+  };
+
+  const getStreamStatusFilterTitle = (status) => {
+    return status === STREAM_WARNING
+      ? 'Inputs with inconsistencies in streams params'
+      : status === STREAM_ERROR
+      ? 'Inputs with errors on getting streams params'
+      : '';
+  };
 
   const storeSearchTextInQueryParams = () => {
     if (searchText) {
@@ -160,9 +194,9 @@
 
   <section class="uk-section-muted toolbar">
     <span class="section-label">Filters</span>
-    <div class="uk-grid uk-grid-small">
-      <div class="uk-width-1-2@m uk-width-1-3@s">
-        <span class="toolbar-label total-inputs-label">
+    <div class="uk-grid uk-grid-small uk-flex-middle">
+      <div>
+        <span class="toolbar-label">
           INPUTS:
 
           {#each statusesList as status (status)}
@@ -179,8 +213,26 @@
           {/each}
         </span>
       </div>
-
-      <div class="uk-width-expand">
+      <div class="uk-margin-small-left">
+        <span class="toolbar-label">
+          STREAMS:
+          {#each streamStatusList as status (status)}
+            <StatusFilter
+              {status}
+              count={aggregatedStreamsData.endpointsStreamsStatus[status]
+                .length}
+              active={globalInputsFilters.includes(status)}
+              title={getStreamStatusFilterTitle(status)}
+              handleClick={() =>
+                (globalInputsFilters = toggleFilterStatus(
+                  globalInputsFilters,
+                  status
+                ))}
+            />
+          {/each}
+        </span>
+      </div>
+      <div class="uk-flex-auto uk-flex-right uk-flex uk-flex-middle">
         <span class="toolbar-label"
           >OUTPUTS:
 
@@ -221,7 +273,7 @@
           {/if}
         {/key}
       </div>
-      <div class="uk-panel uk-width-auto uk-flex-right">
+      <div class="uk-margin-auto-left">
         <!-- TODO: move Confirm modals to other files -->
         <Confirm let:confirm>
           <button
@@ -229,10 +281,8 @@
             data-testid="start-all-outputs"
             title="Start all outputs of all restreams"
             on:click={() => confirm(enableAllOutputsOfRestreams)}
-            ><span class="uk-visible@m">Start All</span><span
-              class="uk-hidden@m">Start</span
-            ></button
-          >
+            ><span>Start All</span>
+          </button>
           <span slot="title">Start all outputs</span>
           <span slot="description"
             >This will start all outputs of all restreams.
@@ -246,10 +296,7 @@
             data-testid="stop-all-outputs"
             title="Stop all outputs of all restreams"
             on:click={() => confirm(disableAllOutputsOfRestreams)}
-            value=""
-            ><span class="uk-visible@m">Stop All</span><span class="uk-hidden@m"
-              >Stop</span
-            ></button
+            value=""><span>Stop All</span></button
           >
           <span slot="title">Stop all outputs</span>
           <span slot="description"
@@ -295,8 +342,7 @@
     <Restream
       public_host={$info.data.info.publicHost}
       value={restream}
-      hidden={hasActiveFilters &&
-        !globalInputsFilters.includes(restream.input.endpoints[0].status)}
+      hidden={globalInputsFilters?.length && !isReStreamVisible(restream)}
       {globalOutputsFilters}
     />
   {:else}
@@ -315,6 +361,7 @@
     margin-left: 10px;
     display: inline-block
     color: var(--primary-text-color)
+
     &:hover
       color: #444
 

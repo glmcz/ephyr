@@ -36,6 +36,7 @@ pub mod server;
 pub mod spec;
 pub mod srs;
 pub mod state;
+pub mod stream_probe;
 pub mod teamspeak;
 pub mod types;
 
