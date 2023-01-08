@@ -206,7 +206,7 @@ impl State {
             )
             .catch_unwind()
             .map_err(move |p| {
-                log::crit!(
+                log::error!(
                     "Panicked executing `{}` hook of state: {}",
                     name,
                     display_panic(&p),
