@@ -19,6 +19,7 @@ All user visible changes to this project will be documented in this file. This p
 ### Miscellaneous
 - Server updates:
   - [SRS] server updated to v4.0-r4 ([#244]);
+  - `slog` replaced with `tracing` ([#284];
 
 
 [#170]: /../../issues/170
@@ -27,7 +28,9 @@ All user visible changes to this project will be documented in this file. This p
     
 [#239]: /../../pull/244
 [#244]: /../../pull/244
+[#266]: /../../pull/266
 [#267]: /../../pull/267
+[#284]: /../../pull/284
 
 
 
