@@ -2,7 +2,10 @@ use std::{borrow::Cow, mem};
 
 use anyhow::anyhow;
 use derive_more::{Deref, Display, From, Into};
-use juniper::{GraphQLObject, GraphQLScalar};
+use juniper::{
+    GraphQLObject, GraphQLScalar, InputValue, ParseScalarResult,
+    ParseScalarValue, ScalarToken, ScalarValue, Value,
+};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize};
@@ -175,6 +178,32 @@ impl RestreamKey {
         let val = val.into();
         (!val.is_empty() && REGEX.is_match(&val))
             .then(|| Self(val.into_owned()))
+    }
+
+    #[allow(clippy::wrong_self_convention)]
+    fn to_output<S: ScalarValue>(&self) -> Value<S> {
+        Value::scalar(self.0.as_str().to_owned())
+    }
+
+    fn from_input<S>(v: &InputValue<S>) -> Result<Self, String>
+        where
+            S: ScalarValue,
+    {
+        let s = v
+            .as_scalar()
+            .and_then(ScalarValue::as_str)
+            .and_then(Self::new);
+
+        match s {
+            None => Err(format!("Expected `String` or `Int`, found: {v}")),
+            Some(e) => Ok(e),
+        }
+    }
+    fn parse_token<S>(value: ScalarToken<'_>) -> ParseScalarResult<S>
+        where
+            S: ScalarValue,
+    {
+        <String as ParseScalarValue<S>>::from_str(value)
     }
 }
 
